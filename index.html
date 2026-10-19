@@ -4,12 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MW5 — the coin that moves with the Earth</title>
-<meta name="description" content="MW5 is a test coin driven by the Opsikom QUAKES_M5 feed: the number of magnitude 5+ earthquakes in the last 30 days. More quakes burn balances, fewer quakes mint to holders. Being prepared for Robinhood Chain.">
+<meta name="description" content="MW5 is a test memecoin driven by the Opsikom QUAKES_M5 feed: the number of magnitude 5+ earthquakes in the last 30 days. More quakes burn balances, fewer quakes mint to holders. Being prepared for Robinhood Chain.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/mw5.css">
+<script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
 <script src="/assets/config.js" defer></script>
 <script src="/assets/history.js" defer></script>
 <script src="/assets/mw5.js" defer></script>
@@ -21,21 +24,19 @@
   <div class="wrap nav-in">
     <a class="brand" href="#top" aria-label="MW5 home">
       <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
-        <rect width="48" height="48" rx="12" fill="#1a120d"/>
-        <path d="M4 26h8l3-9 5 20 5-28 5 24 3-7h11" fill="none" stroke="#ff6a3d" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect width="48" height="48" rx="12" fill="#ef4444"/>
+        <path d="M4 26h8l3-9 5 20 5-28 5 24 3-7h11" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span>MW5</span>
+      <span class="brand-txt"><b>MW5</b><small>Memecoin terminal</small></span>
     </a>
     <nav class="links" aria-label="Sections">
-      <a href="#how">How it works</a>
-      <a href="#curve">The curve</a>
-      <a href="#calculator">Calculator</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#simulator">Simulator</a>
       <a href="#tokenomics">Tokenomics</a>
       <a href="#fees">Fees</a>
-      <a href="#history">History</a>
       <a href="#status">Status</a>
     </nav>
-    <span class="pill warn">Test project · not deployed</span>
+    <span class="sys" id="sysState"><i></i><span>Connecting…</span></span>
   </div>
 </header>
 
@@ -45,11 +46,12 @@
   <div class="wrap hero-in">
     <div class="hero-copy">
       <div class="eyebrow"><i></i> Powered by the Opsikom QUAKES_M5 feed</div>
-      <h1>The coin that moves<br>with the <span class="hot">Earth</span>.</h1>
-      <p class="lead">MW5 reads one number: how many earthquakes of magnitude 5 or more the planet had in the last 30 days. When the Earth shakes more, holders' balances burn. When it calms down, new MW5 are minted straight into their wallets.</p>
+      <h1>Earth said <span class="grad">WAGMI?</span></h1>
+      <p class="slogan" aria-live="polite"><span id="slogan">More quakes, lighter bags.</span></p>
+      <p class="lead">MW5 reads one number: how many magnitude 5+ earthquakes the planet had in the last 30 days. When the Earth shakes more, holders' balances burn. When it calms down, new MW5 are minted straight into their wallets.</p>
       <div class="cta">
-        <a class="btn primary" href="#how">How it works</a>
-        <a class="btn ghost" href="#curve">Try the curve</a>
+        <a class="btn primary" href="#dashboard">Open the dashboard</a>
+        <a class="btn ghost" href="#simulator">Run the simulator</a>
       </div>
       <ul class="facts">
         <li><b>7,000,000,000</b><span>total supply</span></li>
@@ -58,10 +60,10 @@
       </ul>
     </div>
 
-    <div class="quake-panel" aria-live="polite">
-      <div class="qp-head">
-        <span class="qp-title">QUAKES_M5 · live</span>
-        <span class="qp-net" id="qpNet">reading Opsikom…</span>
+    <div class="panel quake-panel" aria-live="polite">
+      <div class="p-head">
+        <span class="p-title"><i class="ic red">●</i> QUAKES_M5 · live</span>
+        <span class="badge" id="qpNet">reading Opsikom…</span>
       </div>
       <canvas id="seismo" class="seismo" width="640" height="200" aria-hidden="true"></canvas>
       <div class="qp-value">
@@ -77,7 +79,193 @@
         <div><dt>Published</dt><dd id="qpTime">—</dd></div>
         <div><dt>Sources</dt><dd>USGS · EMSC · GEOFON</dd></div>
       </dl>
-      <p class="qp-note">Read by your browser from the Opsikom oracle on the Sepolia test network. On Robinhood Chain the same feed will be read through the same interface.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DASHBOARD ================= -->
+<section class="sec" id="dashboard">
+  <div class="wrap">
+    <div class="head">
+      <div class="kicker">Earthquake dashboard</div>
+      <h2>Seismic monitor</h2>
+      <p class="lead">The oracle value that drives MW5, and the M5+ earthquakes behind it, read live from the USGS catalog.</p>
+    </div>
+
+    <div class="stats4">
+      <article class="stat">
+        <div><span>M5+ quakes · 30d (oracle)</span><b id="stCount">—</b></div>
+        <i class="ic-box red" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 13h4l2-6 4 12 3-9 2 3h5"/></svg></i>
+      </article>
+      <article class="stat">
+        <div><span>MW5 balance multiplier</span><b id="stMult">—</b></div>
+        <i class="ic-box green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></i>
+      </article>
+      <article class="stat">
+        <div><span>Strongest · 30d (USGS)</span><b id="stMax">—</b></div>
+        <i class="ic-box orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg></i>
+      </article>
+      <article class="stat">
+        <div><span>Average magnitude · 30d</span><b id="stAvg">—</b></div>
+        <i class="ic-box yellow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></i>
+      </article>
+    </div>
+
+    <div class="dash-grid">
+      <article class="panel map-card">
+        <div class="p-head">
+          <span class="p-title">Global seismic activity</span>
+          <span class="legend">
+            <span><i class="dot m5"></i>5–5.9</span>
+            <span><i class="dot m6"></i>6–6.9</span>
+            <span><i class="dot m7"></i>7+</span>
+          </span>
+        </div>
+        <div class="map-wrap">
+          <svg id="worldMap" viewBox="0 0 800 410" role="img" aria-label="Map of magnitude 5+ earthquakes in the last 30 days"></svg>
+          <span class="map-chip" id="mapChip">loading events…</span>
+          <div class="map-tip" id="mapTip" hidden></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="p-head">
+          <span class="p-title">Data network</span>
+          <span class="badge ok" id="netCount">4 sources</span>
+        </div>
+        <ul class="sensors">
+          <li><div><b>USGS</b><span>United States · global catalog</span></div><em>source</em></li>
+          <li><div><b>EMSC</b><span>Europe · Mediterranean centre</span></div><em>source</em></li>
+          <li><div><b>GEOFON</b><span>Germany · GFZ Potsdam</span></div><em>source</em></li>
+          <li id="opsRow"><div><b>Opsikom oracle</b><span>Median of the nodes · every 3 days</span></div><em class="wait" id="opsState">checking</em></li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="dash-grid two">
+      <article class="panel">
+        <div class="p-head">
+          <span class="p-title">Magnitude distribution</span>
+          <span class="muted-s">events · last 30 days</span>
+        </div>
+        <svg id="magChart" class="mag-chart" viewBox="0 0 520 240" role="img" aria-label="Number of earthquakes by magnitude"></svg>
+      </article>
+      <article class="panel">
+        <div class="p-head">
+          <span class="p-title">Live event feed</span>
+          <span class="live-dot" aria-hidden="true"></span>
+        </div>
+        <ul class="feed" id="feed"><li class="muted-s">Loading the latest M5+ events…</li></ul>
+      </article>
+    </div>
+
+    <article class="panel wide-chart">
+      <div class="p-head">
+        <span class="p-title">Fifty years of a restless planet</span>
+        <span class="legend">
+          <span><i class="ln q"></i>30-day M5+ count</span>
+          <span><i class="ln m"></i>MW5 multiplier</span>
+        </span>
+      </div>
+      <canvas id="histChart" width="1100" height="380" aria-label="Earthquake count and MW5 balance multiplier since 1973" role="img"></canvas>
+      <p class="muted-s">USGS catalog since 1973, rescaled to the feed value of today, peak of every 15 days. The 2004 Sumatra and 2011 Tōhoku swarms hit the cap of 400. A simulation, not a promise.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ================= SIMULATOR ================= -->
+<section class="sec" id="simulator">
+  <div class="wrap">
+    <div class="head">
+      <div class="kicker">Tokenomics &amp; simulator</div>
+      <h2>Move the Earth, watch your bag.</h2>
+      <p class="lead">Enter how many MW5 you hold and change the earthquake count. The simulator shows how many coins you gain (mint) or lose (burn) on the next update, and what they are worth at the price set by the team.</p>
+    </div>
+
+    <div class="sim-grid">
+      <article class="panel sim-in">
+        <div class="p-head">
+          <span class="p-title">Simulate MW5<small>Your coins and the next feed value</small></span>
+          <i class="ic-box violet" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h4"/></svg></i>
+        </div>
+        <label class="field">
+          <span>Your MW5 coins</span>
+          <span class="inp"><input id="cxCoins" type="text" inputmode="decimal" autocomplete="off" value="1,000,000"><em>MW5</em></span>
+        </label>
+        <label class="field">
+          <span>Earthquakes now <small id="cxNowSrc">(launch value)</small></span>
+          <span class="inp"><input id="cxNow" type="number" min="0" max="1000" step="1" value="189"><em>M5+</em></span>
+        </label>
+        <label class="field">
+          <span>Earthquakes after the update: <b id="cxNextVal">199</b> <small id="cxDelta">(+10 vs now)</small></span>
+          <input id="cxNext" type="range" min="0" max="450" step="1" value="199">
+          <span class="quick" role="group" aria-label="Quick changes">
+            <button type="button" data-d="-25">−25</button><button type="button" data-d="-10">−10</button><button type="button" data-d="-1">−1</button><button type="button" data-d="1">+1</button><button type="button" data-d="10">+10</button><button type="button" data-d="25">+25</button>
+          </span>
+        </label>
+        <div class="verdict" id="cxVerdict" aria-live="polite">
+          <i aria-hidden="true">✓</i>
+          <div>
+            <p id="cxSentence">—</p>
+            <b id="cxKind">—</b>
+          </div>
+        </div>
+        <div class="prices">
+          <div><span>MW5 price (set by the team)</span><b id="cxPrice">—</b></div>
+          <div><span>Updated</span><b id="cxPriceDate">—</b></div>
+          <div><span>0.7% to liquidity</span><b id="cxFee">—</b></div>
+        </div>
+      </article>
+
+      <article class="panel sim-chart">
+        <div class="p-head">
+          <span class="p-title">Rebase curve status<small>Balance multiplier vs. launch, by 30-day count</small></span>
+          <span class="badge" id="cxPhaseBadge">—</span>
+        </div>
+        <svg id="curveSvg" viewBox="0 0 640 340" role="img" aria-label="Balance multiplier as a function of the earthquake count"></svg>
+        <div class="prog-l"><span>Balance level after the update</span><b id="cxLevel">—</b></div>
+        <div class="bar-prog" aria-hidden="true"><i id="cxProg"></i></div>
+        <div class="sim-stats">
+          <div><span>Phase</span><b id="cxPhase">—</b></div>
+          <div><span>Your MW5 after</span><b id="cxAfter">—</b></div>
+          <div><span>Change</span><b id="cxChange">—</b></div>
+          <div><span>Value now → after</span><b id="cxUsd">—</b></div>
+        </div>
+      </article>
+    </div>
+
+    <div class="panel tw cx-table">
+      <table>
+        <thead><tr><th>Earthquakes</th><th>What happens</th><th>Your coins after</th><th>Gained / lost</th><th>Value after</th></tr></thead>
+        <tbody id="cxRows"></tbody>
+      </table>
+    </div>
+    <p class="formula">Balances follow <code>e<sup>−(Q² − 189²) / 330²</sup></code>, with Q capped at 400. Moving from one count to another multiplies your coins by the ratio of the two curve values. On a mint you receive 99.3% of it; on a burn you lose the burn plus 0.7%. The price is assumed not to move, so the dollar value changes only with your coin count. A change of more than 150 earthquakes is applied over several updates. An estimate, not financial advice.</p>
+
+    <div id="tokenomics" class="token-block">
+      <h3 class="sub">Two shares. Nothing for the team.</h3>
+      <p class="lead">At launch the contract replays a "historical burn": from zero earthquakes to the real value of the feed on launch day. With 189 quakes that burn is 27.96% of the supply. Those coins are not destroyed: they go to the community, as airdrops and a faucet.</p>
+      <div class="split" role="img" aria-label="72.04% liquidity pools, 27.96% airdrop and faucet">
+        <div class="seg liq" style="flex:72.04"><b>72.04%</b><span>Liquidity pools</span></div>
+        <div class="seg air" style="flex:27.96"><b>27.96%</b><span>Airdrop &amp; faucet</span></div>
+      </div>
+      <div class="cards three">
+        <article class="panel card">
+          <h3>Liquidity pools</h3>
+          <p class="big">5,042,457,791 MW5</p>
+          <p>80% in a Uniswap-style V2 pool, 20% in a V3 pool. LP tokens and the V3 position go to the dead address: the liquidity is locked forever.</p>
+        </article>
+        <article class="panel card">
+          <h3>Airdrop &amp; faucet</h3>
+          <p class="big">1,957,542,209 MW5</p>
+          <p>The coins the historical burn would have destroyed. The wallet is excluded from burn and mint, so the community share stays whole until it is given out.</p>
+        </article>
+        <article class="panel card">
+          <h3>Launch day decides</h3>
+          <p class="big">25% – 35%</p>
+          <p>The share depends on the feed value on launch day. The contract refuses to deploy if the community share falls outside 25–35%.</p>
+        </article>
+      </div>
     </div>
   </div>
 </section>
@@ -90,26 +278,10 @@
       <h2>From the seismometer to your wallet.</h2>
     </div>
     <ol class="steps">
-      <li>
-        <span class="n">01</span>
-        <h3>Three catalogs count</h3>
-        <p>USGS, EMSC and GEOFON each count the magnitude 5+ earthquakes of the last 30 days. Every Opsikom node takes the median of the three.</p>
-      </li>
-      <li>
-        <span class="n">02</span>
-        <h3>The oracle publishes</h3>
-        <p>Independent nodes sign the value. The Opsikom contract checks the quorum and publishes the median of the nodes, every 3 days.</p>
-      </li>
-      <li>
-        <span class="n">03</span>
-        <h3>Anyone calls update()</h3>
-        <p>Whoever calls <code>update()</code> on MW5 applies the new value and earns a bounty: 0.1% of the coins burned or minted, with no cap.</p>
-      </li>
-      <li>
-        <span class="n">04</span>
-        <h3>Wallets breathe</h3>
-        <p>Every holder's balance is multiplied by the same factor. More quakes: burn. Fewer quakes: mint. Even a change of one earthquake counts.</p>
-      </li>
+      <li class="panel"><span class="n">01</span><h3>Three catalogs count</h3><p>USGS, EMSC and GEOFON each count the magnitude 5+ earthquakes of the last 30 days. Every Opsikom node takes the median of the three.</p></li>
+      <li class="panel"><span class="n">02</span><h3>The oracle publishes</h3><p>Independent nodes sign the value. The Opsikom contract checks the quorum and publishes the median of the nodes, every 3 days.</p></li>
+      <li class="panel"><span class="n">03</span><h3>Anyone calls update()</h3><p>Whoever calls <code>update()</code> on MW5 applies the new value and earns a bounty: 0.1% of the coins burned or minted, with no cap.</p></li>
+      <li class="panel"><span class="n">04</span><h3>Wallets breathe</h3><p>Every holder's balance is multiplied by the same factor. More quakes: burn. Fewer quakes: mint. Even a change of one earthquake counts.</p></li>
     </ol>
     <div class="note-box">
       <b>Only holders move.</b> The liquidity pools (V2 and V3) and the airdrop &amp; faucet wallet are excluded: their balances never burn or mint. The price stays the one of the pools, so the value of a wallet really goes up and down with the Earth.
@@ -117,123 +289,8 @@
   </div>
 </section>
 
-<!-- ================= CURVE ================= -->
-<section class="sec alt" id="curve">
-  <div class="wrap curve-grid">
-    <div>
-      <div class="head">
-        <div class="kicker">The curve</div>
-        <h2>Move the Earth, watch your balance.</h2>
-        <p class="lead">Balances follow a gaussian curve of the 30-day count. At launch the count is about 189, so balances start at ×1.00. Above 400 quakes the curve stops: balances never fall below ×0.32.</p>
-      </div>
-      <label class="slider">
-        <span>Earthquakes M5+ in the last 30 days: <b id="sliderVal">189</b></span>
-        <input id="slider" type="range" min="0" max="450" step="1" value="189" aria-describedby="sliderOut">
-      </label>
-      <div class="calc" id="sliderOut">
-        <div><span>Your balance</span><b id="calcMult">×1.000</b></div>
-        <div><span>1,000,000 MW5 become</span><b id="calcBal">1,000,000</b></div>
-        <div><span>What happens</span><b id="calcWhat">Launch value</b></div>
-      </div>
-      <p class="formula"><code>balance = balance₀ × e<sup>−(Q² − 189²) / 330²</sup></code>, with Q capped at 400.</p>
-    </div>
-    <figure class="chart-card">
-      <svg id="curveSvg" viewBox="0 0 560 360" role="img" aria-label="Balance multiplier as a function of the earthquake count"></svg>
-      <figcaption>Balance multiplier (vertical) for each 30-day earthquake count (horizontal). Before the 0.7% fee.</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- ================= CALCULATOR ================= -->
-<section class="sec" id="calculator">
-  <div class="wrap">
-    <div class="head">
-      <div class="kicker">Calculator</div>
-      <h2>What happens to your MW5?</h2>
-      <p class="lead">Enter how many MW5 you hold and move the earthquake count. The calculator shows how many coins you gain (mint) or lose (burn) on the next update, and what they are worth at the MW5 price set by the team.</p>
-    </div>
-    <div class="cx-grid">
-      <div class="cx-in">
-        <label class="field">
-          <span>Your MW5 coins</span>
-          <input id="cxCoins" type="text" inputmode="decimal" autocomplete="off" value="1,000,000">
-        </label>
-        <label class="field">
-          <span>Earthquakes now <small id="cxNowSrc">(launch value)</small></span>
-          <input id="cxNow" type="number" min="0" max="1000" step="1" value="189">
-        </label>
-        <label class="slider">
-          <span>Earthquakes after the update: <b id="cxNextVal">199</b> <small id="cxDelta">(+10)</small></span>
-          <input id="cxNext" type="range" min="0" max="450" step="1" value="199">
-        </label>
-        <div class="cx-price">
-          <span>MW5 price set by the team</span>
-          <b id="cxPrice">—</b>
-          <small id="cxPriceDate"></small>
-        </div>
-      </div>
-      <div class="cx-out" aria-live="polite">
-        <div class="cx-verdict" id="cxVerdict">
-          <span id="cxKind">Burn</span>
-          <b id="cxChange">−0 MW5</b>
-          <small id="cxChangeUsd">−$0.00</small>
-        </div>
-        <div class="calc">
-          <div><span>Coins now</span><b id="cxBefore">—</b></div>
-          <div><span>Coins after</span><b id="cxAfter">—</b></div>
-          <div><span>Change</span><b id="cxPct">—</b></div>
-          <div><span>Value now</span><b id="cxUsdBefore">—</b></div>
-          <div><span>Value after</span><b id="cxUsdAfter">—</b></div>
-          <div><span>0.7% to liquidity</span><b id="cxFee">—</b></div>
-        </div>
-      </div>
-    </div>
-    <div class="tw cx-table">
-      <table>
-        <thead><tr><th>Earthquakes</th><th>What happens</th><th>Your coins after</th><th>Coins gained / lost</th><th>Value after</th></tr></thead>
-        <tbody id="cxRows"></tbody>
-      </table>
-    </div>
-    <div class="note-box">
-      <b>How it is calculated.</b> Balances follow <code>e<sup>−(Q² − 189²) / 330²</sup></code>, with Q capped at 400. Going from one count to another multiplies your coins by the ratio of the two curve values. On a mint you receive 99.3% of it, on a burn you lose the burn plus 0.7%: that 0.7% goes to the V2 pool. The price is the one set by the team and is assumed not to move, so the dollar value changes only because your coin count changes. A change of more than 150 earthquakes is applied over several updates. An estimate, not financial advice.
-    </div>
-  </div>
-</section>
-
-<!-- ================= TOKENOMICS ================= -->
-<section class="sec" id="tokenomics">
-  <div class="wrap">
-    <div class="head">
-      <div class="kicker">Tokenomics</div>
-      <h2>Two shares. Nothing for the team.</h2>
-      <p class="lead">At launch the contract replays a "historical burn": from zero earthquakes to the real value of the feed on launch day. With 189 quakes that burn is 27.96% of the supply. Those coins are not destroyed: they go to the community, as airdrops and a faucet.</p>
-    </div>
-    <div class="split" role="img" aria-label="72.04% liquidity pools, 27.96% airdrop and faucet">
-      <div class="seg liq" style="flex:72.04"><b>72.04%</b><span>Liquidity pools</span></div>
-      <div class="seg air" style="flex:27.96"><b>27.96%</b><span>Airdrop &amp; faucet</span></div>
-    </div>
-    <div class="cards three">
-      <article class="card">
-        <h3>Liquidity pools</h3>
-        <p class="big">5,042,457,791 MW5</p>
-        <p>80% in a Uniswap-style V2 pool, 20% in a V3 pool. LP tokens and the V3 position go to the dead address: the liquidity is locked forever.</p>
-      </article>
-      <article class="card">
-        <h3>Airdrop &amp; faucet</h3>
-        <p class="big">1,957,542,209 MW5</p>
-        <p>The coins the historical burn would have destroyed. The wallet is excluded from burn and mint, so the community share stays whole until it is given out.</p>
-      </article>
-      <article class="card">
-        <h3>Launch day decides</h3>
-        <p class="big">25% – 35%</p>
-        <p>The share depends on the feed value on launch day. The contract refuses to deploy if the community share falls outside 25–35%.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
 <!-- ================= FEES ================= -->
-<section class="sec alt" id="fees">
+<section class="sec" id="fees">
   <div class="wrap fees-grid">
     <div>
       <div class="head">
@@ -245,7 +302,7 @@
         <b>Why sells are free.</b> A pool expects to receive exactly the amount it is sold. A fee on sells would make V2 swaps fail and V3 refuse the payment: MW5 could not be sold at all.
       </div>
     </div>
-    <div class="tw">
+    <div class="panel tw">
       <table>
         <thead><tr><th>Operation</th><th>Fee</th><th>Who feels it</th></tr></thead>
         <tbody>
@@ -262,39 +319,15 @@
   </div>
 </section>
 
-<!-- ================= HISTORY ================= -->
-<section class="sec" id="history">
-  <div class="wrap">
-    <div class="head">
-      <div class="kicker">History</div>
-      <h2>Fifty years of a restless planet.</h2>
-      <p class="lead">The 30-day count of magnitude 5+ earthquakes since 1973, on the scale of the feed, and what the MW5 curve would have done to a balance. Big earthquakes bring swarms of aftershocks: the 2004 Sumatra and 2011 Tōhoku spikes hit the cap of 400.</p>
-    </div>
-    <figure class="chart-card wide">
-      <canvas id="histChart" width="1100" height="380" aria-label="Earthquake count and MW5 balance multiplier since 1973" role="img"></canvas>
-      <figcaption>
-        <span class="lg q">30-day M5+ count</span>
-        <span class="lg m">MW5 balance multiplier vs. 189 (right axis, before fees)</span>
-        <span class="src">USGS catalog rescaled to the feed value of today. One point every 15 days, peak of the period. A simulation, not a promise.</span>
-      </figcaption>
-    </figure>
-    <div class="cards three stats">
-      <article class="card"><b>~113</b><span>value changes a year with a new value every 3 days</span></article>
-      <article class="card"><b>×0.32</b><span>lowest possible balance, at the 400 cap</span></article>
-      <article class="card"><b>×1.39</b><span>highest possible balance, at zero earthquakes</span></article>
-    </div>
-  </div>
-</section>
-
 <!-- ================= STATUS ================= -->
-<section class="sec alt" id="status">
+<section class="sec" id="status">
   <div class="wrap">
     <div class="head">
       <div class="kicker">Status</div>
       <h2>Honest about where it stands.</h2>
     </div>
     <div class="cards three">
-      <article class="card">
+      <article class="panel card">
         <h3>Done</h3>
         <ul class="tick">
           <li>QUAKES_M5 feed live on the Opsikom test network, every 3 days</li>
@@ -302,7 +335,7 @@
           <li>Simulation of the curve on 50 years of data</li>
         </ul>
       </article>
-      <article class="card">
+      <article class="panel card">
         <h3>Next</h3>
         <ul class="tick todo">
           <li>QUAKES_M5 on Robinhood Chain</li>
@@ -311,7 +344,7 @@
           <li>Test deployment on Robinhood Chain</li>
         </ul>
       </article>
-      <article class="card warnc">
+      <article class="panel card warnc">
         <h3>Read this first</h3>
         <ul class="tick todo">
           <li>MW5 is not deployed and has no value</li>
@@ -327,7 +360,7 @@
 
 <footer class="foot">
   <div class="wrap foot-in">
-    <span>MW5 · a test coin on the <a href="https://opsikom.com" target="_blank" rel="noopener noreferrer">Opsikom</a> earthquake feed.</span>
+    <span>MW5 · a test memecoin on the <a href="https://opsikom.com" target="_blank" rel="noopener noreferrer">Opsikom</a> earthquake feed.</span>
     <span>Data: USGS, EMSC, GEOFON. Network: Robinhood Chain (in preparation).</span>
   </div>
 </footer>
