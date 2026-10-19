@@ -40,6 +40,7 @@ function showLive(){
     $('qpRound').textContent = '#' + round.toString();
     $('qpTime').textContent = at ? new Date(at*1000).toISOString().slice(0,16).replace('T',' ') + ' UTC' : '—';
     var n = $('qpNet'); n.textContent = 'Opsikom · Sepolia testnet'; n.className = 'qp-net ok';
+    calc.setLive(v);
   }).catch(function(){
     var n = $('qpNet'); n.textContent = 'oracle not reachable right now'; n.className = 'qp-net err';
   });
@@ -131,6 +132,71 @@ function setSlider(q){
   }
 }
 
+/* ---------- calcolatrice: mint/burn sui coin dell'utente, al prezzo del team ---------- */
+var LP_FEE = 0.007;
+var calc = { setLive: function(){} };
+function setupCalc(){
+  var coinsEl = $('cxCoins'), nowEl = $('cxNow'), nextEl = $('cxNext'); if(!coinsEl) return;
+  var cfg = window.MW5_CONFIG || {}, price = Number(cfg.priceUsd) || 0, nowTouched = false;
+  function usd(x){
+    var a = Math.abs(x), d = a === 0 || a >= 0.01 ? 2 : Math.min(10, 2 - Math.floor(Math.log10(a)) + 1);
+    return (x < 0 ? '−$' : '$') + a.toLocaleString('en-US', {minimumFractionDigits: Math.min(d,2), maximumFractionDigits: d});
+  }
+  function coins(x){ return Math.abs(x).toLocaleString('en-US', {maximumFractionDigits: Math.abs(x) < 10 ? 4 : 0}); }
+  function sign(x){ return x > 0 ? '+' : x < 0 ? '−' : ''; }
+  function readCoins(){ var v = Number(String(coinsEl.value).replace(/[,\s]/g,'')); return isFinite(v) && v > 0 ? v : 0; }
+  function readNow(){ var v = Math.round(Number(nowEl.value)); return isFinite(v) && v >= 0 ? v : V0; }
+  // coin dopo l'update: rapporto tra i due punti della curva, con lo 0,7% alla liquidita'
+  function after(c, from, to){
+    var r = mult(to) / mult(from), net = r >= 1 ? 1 + (r-1)*(1-LP_FEE) : r - (1-r)*LP_FEE;
+    return { coins: c*net, fee: c*Math.abs(r-1)*LP_FEE };
+  }
+  function what(from, to){
+    if(Math.min(from,CAP) === Math.min(to,CAP)) return to === from ? 'No change' : 'Capped: no change';
+    return to < from ? 'Mint' : 'Burn';
+  }
+  function render(){
+    var c = readCoins(), q0 = readNow(), q1 = Number(nextEl.value), r = after(c, q0, q1), d = r.coins - c;
+    $('cxNextVal').textContent = q1;
+    $('cxDelta').textContent = '(' + (q1 === q0 ? '±0' : sign(q1-q0) + Math.abs(q1-q0)) + ' vs now)';
+    var kind = what(q0, q1), v = $('cxVerdict');
+    v.className = 'cx-verdict ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'burn' : 'same');
+    $('cxKind').textContent = kind === 'Mint' ? 'Mint · fewer earthquakes' : kind === 'Burn' ? 'Burn · more earthquakes' : kind;
+    $('cxChange').textContent = sign(d) + coins(d) + ' MW5';
+    $('cxChangeUsd').textContent = (d > 0 ? '+' : '') + usd(d*price);
+    $('cxBefore').textContent = coins(c);
+    $('cxAfter').textContent = coins(r.coins);
+    $('cxPct').textContent = c ? sign(d) + Math.abs(d/c*100).toFixed(2) + '%' : '—';
+    $('cxUsdBefore').textContent = usd(c*price);
+    $('cxUsdAfter').textContent = usd(r.coins*price);
+    $('cxFee').textContent = coins(r.fee) + ' MW5';
+    var rows = '', steps = [-50,-25,-10,-5,-1,0,1,5,10,25,50];
+    steps.forEach(function(s){
+      var q = q0 + s; if(q < 0) return;
+      var x = after(c, q0, q), dd = x.coins - c, k = what(q0, q);
+      rows += '<tr' + (s === 0 ? ' class="now"' : '') + '><td>' + q + ' (' + (s === 0 ? 'now' : sign(s) + Math.abs(s)) + ')</td>'
+        + '<td class="' + (k === 'Mint' ? 'up' : k === 'Burn' ? 'down' : '') + '">' + k + '</td>'
+        + '<td>' + coins(x.coins) + '</td>'
+        + '<td class="' + (dd > 0 ? 'up' : dd < 0 ? 'down' : '') + '">' + sign(dd) + coins(dd) + '</td>'
+        + '<td>' + usd(x.coins*price) + '</td></tr>';
+    });
+    $('cxRows').innerHTML = rows;
+  }
+  $('cxPrice').textContent = price ? usd(price) + ' per MW5' : 'not set';
+  $('cxPriceDate').textContent = cfg.priceDate ? 'updated ' + cfg.priceDate : '';
+  coinsEl.addEventListener('input', render);
+  coinsEl.addEventListener('blur', function(){ var c = readCoins(); coinsEl.value = c ? c.toLocaleString('en-US', {maximumFractionDigits: 4}) : ''; render(); });
+  nowEl.addEventListener('input', function(){ nowTouched = true; $('cxNowSrc').textContent = '(your value)'; render(); });
+  nextEl.addEventListener('input', render);
+  calc.setLive = function(v){
+    if(nowTouched) return;
+    nowEl.value = v; nextEl.value = Math.min(450, v + 10);
+    $('cxNowSrc').textContent = '(live from the feed)';
+    render();
+  };
+  render();
+}
+
 /* ---------- storico dal 1973 (canvas) ---------- */
 function drawHistory(){
   var c = $('histChart'), H0 = window.MW5_HISTORY; if(!c || !H0) return;
@@ -184,6 +250,7 @@ seismo();
 drawCurve();
 var sl = $('slider');
 if(sl){ sl.addEventListener('input', function(){ setSlider(sl.value); }); setSlider(sl.value); }
+setupCalc();
 drawHistory();
 showLive();
 setInterval(showLive, 5*60*1000);

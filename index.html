@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/mw5.css">
+<script src="/assets/config.js" defer></script>
 <script src="/assets/history.js" defer></script>
 <script src="/assets/mw5.js" defer></script>
 </head>
@@ -28,6 +29,7 @@
     <nav class="links" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#curve">The curve</a>
+      <a href="#calculator">Calculator</a>
       <a href="#tokenomics">Tokenomics</a>
       <a href="#fees">Fees</a>
       <a href="#history">History</a>
@@ -139,6 +141,62 @@
       <svg id="curveSvg" viewBox="0 0 560 360" role="img" aria-label="Balance multiplier as a function of the earthquake count"></svg>
       <figcaption>Balance multiplier (vertical) for each 30-day earthquake count (horizontal). Before the 0.7% fee.</figcaption>
     </figure>
+  </div>
+</section>
+
+<!-- ================= CALCULATOR ================= -->
+<section class="sec" id="calculator">
+  <div class="wrap">
+    <div class="head">
+      <div class="kicker">Calculator</div>
+      <h2>What happens to your MW5?</h2>
+      <p class="lead">Enter how many MW5 you hold and move the earthquake count. The calculator shows how many coins you gain (mint) or lose (burn) on the next update, and what they are worth at the MW5 price set by the team.</p>
+    </div>
+    <div class="cx-grid">
+      <div class="cx-in">
+        <label class="field">
+          <span>Your MW5 coins</span>
+          <input id="cxCoins" type="text" inputmode="decimal" autocomplete="off" value="1,000,000">
+        </label>
+        <label class="field">
+          <span>Earthquakes now <small id="cxNowSrc">(launch value)</small></span>
+          <input id="cxNow" type="number" min="0" max="1000" step="1" value="189">
+        </label>
+        <label class="slider">
+          <span>Earthquakes after the update: <b id="cxNextVal">199</b> <small id="cxDelta">(+10)</small></span>
+          <input id="cxNext" type="range" min="0" max="450" step="1" value="199">
+        </label>
+        <div class="cx-price">
+          <span>MW5 price set by the team</span>
+          <b id="cxPrice">—</b>
+          <small id="cxPriceDate"></small>
+        </div>
+      </div>
+      <div class="cx-out" aria-live="polite">
+        <div class="cx-verdict" id="cxVerdict">
+          <span id="cxKind">Burn</span>
+          <b id="cxChange">−0 MW5</b>
+          <small id="cxChangeUsd">−$0.00</small>
+        </div>
+        <div class="calc">
+          <div><span>Coins now</span><b id="cxBefore">—</b></div>
+          <div><span>Coins after</span><b id="cxAfter">—</b></div>
+          <div><span>Change</span><b id="cxPct">—</b></div>
+          <div><span>Value now</span><b id="cxUsdBefore">—</b></div>
+          <div><span>Value after</span><b id="cxUsdAfter">—</b></div>
+          <div><span>0.7% to liquidity</span><b id="cxFee">—</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="tw cx-table">
+      <table>
+        <thead><tr><th>Earthquakes</th><th>What happens</th><th>Your coins after</th><th>Coins gained / lost</th><th>Value after</th></tr></thead>
+        <tbody id="cxRows"></tbody>
+      </table>
+    </div>
+    <div class="note-box">
+      <b>How it is calculated.</b> Balances follow <code>e<sup>−(Q² − 189²) / 330²</sup></code>, with Q capped at 400. Going from one count to another multiplies your coins by the ratio of the two curve values. On a mint you receive 99.3% of it, on a burn you lose the burn plus 0.7%: that 0.7% goes to the V2 pool. The price is the one set by the team and is assumed not to move, so the dollar value changes only because your coin count changes. A change of more than 150 earthquakes is applied over several updates. An estimate, not financial advice.
+    </div>
   </div>
 </section>
 

@@ -108,6 +108,34 @@ input[type=range]{width:100%;accent-color:var(--magma);height:28px}
 .lg.m:before{background:var(--teal)}
 .src{flex-basis:100%}
 
+/* calcolatrice */
+.cx-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:28px;align-items:start}
+.cx-in{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.field{display:block;margin-bottom:16px}
+.field span{display:block;font-size:15px;color:var(--muted);margin-bottom:8px}
+.field small,.slider small{color:var(--dim);font-size:13px;font-weight:400}
+.field input{width:100%;font:600 18px var(--mono);color:var(--ink);background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:12px 14px}
+.field input:focus{outline:2px solid var(--magma);outline-offset:1px}
+.cx-price{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding-top:14px;border-top:1px solid var(--line)}
+.cx-price span{font-size:13px;color:var(--dim);flex-basis:100%}
+.cx-price b{font:600 20px var(--mono);color:var(--ember)}
+.cx-price small{color:var(--dim);font-size:12px}
+.cx-out{display:grid;gap:12px}
+.cx-verdict{border-radius:var(--radius);padding:22px;border:1px solid var(--line2);background:var(--panel2)}
+.cx-verdict span{display:block;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.cx-verdict b{display:block;font:700 34px var(--mono);margin:6px 0 2px;overflow-wrap:anywhere}
+.cx-verdict small{font:600 16px var(--mono);color:var(--muted)}
+.cx-verdict.mint{border-color:rgba(63,214,176,.45);background:linear-gradient(180deg,rgba(63,214,176,.1),var(--panel))}
+.cx-verdict.mint span,.cx-verdict.mint b{color:var(--teal)}
+.cx-verdict.burn{border-color:rgba(255,106,61,.45);background:linear-gradient(180deg,rgba(255,106,61,.1),var(--panel))}
+.cx-verdict.burn span,.cx-verdict.burn b{color:var(--magma)}
+.cx-verdict.same span{color:var(--dim)}
+.cx-table{margin-top:24px}
+.cx-table td{font-family:var(--mono);font-size:14px;white-space:nowrap}
+.cx-table tr.now td{background:rgba(255,208,122,.06);color:var(--ember)}
+.cx-table .up{color:var(--teal)}
+.cx-table .down{color:var(--magma)}
+
 /* tokenomics */
 .split{display:flex;height:84px;border-radius:18px;overflow:hidden;border:1px solid var(--line2);margin-bottom:22px}
 .seg{display:flex;flex-direction:column;justify-content:center;padding:0 20px;min-width:0}
@@ -149,7 +177,7 @@ td.no{font-family:var(--mono);color:var(--teal);font-weight:600}
 @media(max-width:1000px){
   .links{display:none}
   .pill{margin-left:auto}
-  .hero-in,.curve-grid,.fees-grid{grid-template-columns:1fr}
+  .hero-in,.curve-grid,.fees-grid,.cx-grid{grid-template-columns:1fr}
   .steps{grid-template-columns:repeat(2,1fr)}
   .steps li:after{display:none}
   .cards.three{grid-template-columns:1fr}
@@ -160,6 +188,8 @@ td.no{font-family:var(--mono);color:var(--teal);font-weight:600}
   .sec{padding:60px 0}
   .steps{grid-template-columns:1fr}
   .calc{grid-template-columns:1fr}
+  .cx-out .calc{grid-template-columns:1fr 1fr}
+  .cx-verdict b{font-size:26px}
   .qp-meta{grid-template-columns:1fr 1fr}
   .qp-value strong{font-size:56px}
   .split{height:auto;flex-direction:column}
