@@ -5,9 +5,12 @@
 'use strict';
 
 /* ---------- parametri del contratto MW5 ---------- */
-var K = 330, V0 = 189, CAP = 400, LP_FEE = 0.007;
-function mult(q){ var v = Math.min(Math.max(q,0), CAP); return Math.exp(-(v*v - V0*V0)/(K*K)); }
-var MULT_MAX = mult(0), MULT_MIN = mult(CAP);
+/* v2: media mobile di 90 valori giornalieri, curva morbida 1 +/- 0,3 x d/(70+d), al massimo 0,7% per aggiornamento.
+   Il livello scende: burn dal pool V2. Il livello sale: mint agli holder (99,3%). I saldi degli holder non scendono mai. */
+var V0 = 189, CAP = 400, LP_FEE = 0.007, AMP = 0.3, SCALE = 70, AVG_DAYS = 90, STEP = 0.007;
+function levelAt(avg){ var a = Math.min(Math.max(avg,0), CAP), d = Math.abs(a - V0), f = AMP*d/(SCALE + d); return a > V0 ? 1 - f : 1 + f; }
+function stepToward(cur, target){ return target > cur ? Math.min(target, cur*(1+STEP)) : Math.max(target, cur*(1-STEP)); }
+var LEVEL_MAX = levelAt(0), LEVEL_MIN = levelAt(CAP);
 
 /* ---------- Opsikom (Sepolia test network) ---------- */
 var HUB = '0xc7bEeC2e6349392dDc90799b44D21a4AB3A9De0a';
@@ -70,7 +73,7 @@ function showLive(){
   call(0).then(function(hex){
     var round = word(hex,0), ans = word(hex,1), at = Number(word(hex,2));
     if(ans >= (1n<<255n)) ans -= (1n<<256n);
-    var v = Number(ans), m = '×' + mult(v).toFixed(3) + (v > CAP ? ' (cap)' : '');
+    var v = Number(ans), m = '×' + levelAt(v).toFixed(3) + (v > CAP ? ' (cap)' : '');
     live.value = v;
     setT('qpValue', nf.format(v));
     setT('qpMult', m);
@@ -327,97 +330,114 @@ function monitor(){
   }
 }
 
-/* ---------- simulatore: mint/burn sui coin dell'utente, al prezzo del team ---------- */
+/* ---------- simulatore v2: media a 90 giorni, passi di 0,7% al giorno, i saldi non scendono mai ---------- */
+// La finestra di 90 giorni parte tutta alla media attuale; ogni giorno esce un valore medio ed entra il nuovo valore.
+// Si parte dal livello gia' assestato sulla curva. Livello su: mint agli holder (99,3%). Livello giu': burn dal pool V2.
+function simulate(avg0, v, days){
+  var a0 = Math.min(Math.max(avg0,0), CAP), vv = Math.min(Math.max(v,0), CAP), L = levelAt(a0);
+  var out = { level0: L, avg: a0, level: L, mint: 1, fee: 0, price: 1 };
+  for(var d = 1; d <= days; d++){
+    var avg = a0 + Math.min(d, AVG_DAYS)*(vv - a0)/AVG_DAYS, n = stepToward(L, levelAt(avg)), r = n / L;
+    if(r > 1){ out.fee += out.mint*(r-1)*LP_FEE; out.mint *= 1 + (r-1)*(1-LP_FEE); }
+    else if(r < 1) out.price /= r;   // meno MW5 nel pool V2, stesso ETH: prezzo spot piu' alto
+    L = n; out.avg = avg;
+  }
+  out.level = L;
+  return out;
+}
+
 var calc = { setLive: function(){} };
 function setupCalc(){
   var coinsEl = $('cxCoins'), nowEl = $('cxNow'), nextEl = $('cxNext'); if(!coinsEl) return;
-  var cfg = window.MW5_CONFIG || {}, price = Number(cfg.priceUsd) || 0, nowTouched = false;
+  var cfg = window.MW5_CONFIG || {}, price = Number(cfg.priceUsd) || 0, nowTouched = false, days = 30;
   function usd(x){
     var a = Math.abs(x), d = a === 0 || a >= 0.01 ? 2 : Math.min(10, 2 - Math.floor(Math.log10(a)) + 1);
     return (x < 0 ? '−$' : '$') + a.toLocaleString('en-US', {minimumFractionDigits: Math.min(d,2), maximumFractionDigits: d});
   }
   function coins(x){ return Math.abs(x).toLocaleString('en-US', {maximumFractionDigits: Math.abs(x) < 10 ? 4 : 0}); }
+  function pct(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x*100).toFixed(2) + '%'; }
   function sign(x){ return x > 0 ? '+' : x < 0 ? '−' : ''; }
   function readCoins(){ var v = Number(String(coinsEl.value).replace(/[,\s]/g,'')); return isFinite(v) && v > 0 ? v : 0; }
-  function readNow(){ var v = Math.round(Number(nowEl.value)); return isFinite(v) && v >= 0 ? v : V0; }
-  // coin dopo l'update: rapporto tra i due punti della curva, con lo 0,7% alla liquidita'
-  function after(c, from, to){
-    var r = mult(to) / mult(from), net = r >= 1 ? 1 + (r-1)*(1-LP_FEE) : r - (1-r)*LP_FEE;
-    return { coins: c*net, fee: c*Math.abs(r-1)*LP_FEE };
-  }
-  function what(from, to){
-    if(Math.min(from,CAP) === Math.min(to,CAP)) return to === from ? 'No change' : 'Capped: no change';
-    return to < from ? 'Mint' : 'Burn';
-  }
+  function readNow(){ var v = Number(nowEl.value); return isFinite(v) && v >= 0 ? v : V0; }
+  function kindOf(r){ return r.mint > 1 + 1e-12 ? 'Mint' : r.price > 1 + 1e-12 ? 'Burn' : 'Hold'; }
+  function daysTxt(n){ return n === 1 ? '1 day' : n + ' days'; }
 
-  /* curva SVG */
-  var svg = $('curveSvg'), W = 640, H = 340, L = 44, R = 14, T = 16, B = 34, QMAX = 450, MMAX = 1.5;
-  var X = function(q){ return L + (W-L-R)*q/QMAX; }, Y = function(m){ return T + (H-T-B)*(1-m/MMAX); };
-  [0,.5,1,1.5].forEach(function(m){
+  /* curva SVG: livello in funzione della media a 90 giorni */
+  var svg = $('curveSvg'), W = 640, H = 340, L = 50, R = 14, T = 16, B = 34, QMAX = 450, MMIN = 0.6, MMAX = 1.4;
+  var X = function(q){ return L + (W-L-R)*Math.min(q,QMAX)/QMAX; }, Y = function(m){ return T + (H-T-B)*(1-(m-MMIN)/(MMAX-MMIN)); };
+  [0.7,0.85,1,1.15,1.3].forEach(function(m){
     s('line',{x1:L,x2:W-R,y1:Y(m),y2:Y(m),stroke:'rgba(255,255,255,.08)'},svg);
-    txt(L-8, Y(m)+4, '×'+m.toFixed(1), {'text-anchor':'end'}, svg);
+    txt(L-8, Y(m)+4, '×'+m.toFixed(2), {'text-anchor':'end'}, svg);
   });
   [0,100,200,300,400].forEach(function(q){ txt(X(q), H-B+20, q, {'text-anchor':'middle'}, svg); });
   s('rect',{x:X(CAP),y:T,width:X(QMAX)-X(CAP),height:H-T-B,fill:'rgba(255,210,63,.07)',rx:8},svg);
   txt(X(CAP)+6, T+14, 'cap', {fill:'#ffd23f'}, svg);
   var defs = s('defs',{},svg), lg = s('linearGradient',{id:'cg',x1:0,x2:0,y1:0,y2:1},defs);
   s('stop',{offset:0,'stop-color':'rgba(167,139,250,.45)'},lg); s('stop',{offset:1,'stop-color':'rgba(167,139,250,0)'},lg);
-  var d = '', area = 'M'+X(0)+' '+Y(0);
-  for(var q=0;q<=QMAX;q+=3){ var p=X(q).toFixed(1)+' '+Y(mult(q)).toFixed(1); d+=(q?'L':'M')+p; area+='L'+p; }
-  area += 'L'+X(QMAX)+' '+Y(0)+'Z';
+  var d = '', area = 'M'+X(0)+' '+Y(MMIN);
+  for(var q=0;q<=QMAX;q+=3){ var p=X(q).toFixed(1)+' '+Y(levelAt(q)).toFixed(1); d+=(q?'L':'M')+p; area+='L'+p; }
+  area += 'L'+X(QMAX)+' '+Y(MMIN)+'Z';
   s('path',{d:area,fill:'url(#cg)'},svg);
   s('path',{d:d,fill:'none',stroke:'#b79bff','stroke-width':3.2,'stroke-linejoin':'round'},svg);
   s('line',{x1:L,x2:W-R,y1:Y(1),y2:Y(1),stroke:'rgba(255,255,255,.2)','stroke-dasharray':'2 4'},svg);
   s('line',{x1:X(V0),x2:X(V0),y1:T,y2:H-B,stroke:'#3ee6d0','stroke-dasharray':'4 4',opacity:.6},svg);
   txt(X(V0)+6, H-B-8, 'launch 189', {fill:'#3ee6d0'}, svg);
+  txt(L+8, Y(1.3)+4, 'fewer quakes: mint to holders', {fill:'#34e3a0'}, svg);
+  txt(X(CAP)-6, Y(0.7)+4, 'more quakes: pool burn', {fill:'#ff8da0','text-anchor':'end'}, svg);
   var seg = s('path',{fill:'none','stroke-width':6,'stroke-linecap':'round',opacity:.9},svg);
   var nowDot = s('circle',{r:6,fill:'#fff',stroke:'#0b0f2a','stroke-width':3},svg);
   var nowLbl = txt(0, 0, 'now', {fill:'#fff','text-anchor':'middle'}, svg);
   var nextDot = s('circle',{r:8,stroke:'#0b0f2a','stroke-width':3},svg);
-  var nextLbl = txt(0, 0, 'next', {'text-anchor':'middle','font-weight':700}, svg);
+  var nextLbl = txt(0, 0, 'after', {'text-anchor':'middle','font-weight':700}, svg);
 
   function render(){
-    var c = readCoins(), q0 = readNow(), q1 = Number(nextEl.value), r = after(c, q0, q1), dd = r.coins - c;
-    var kind = what(q0, q1), col = kind === 'Mint' ? '#34e3a0' : kind === 'Burn' ? '#ff4d6a' : '#bcc5e3';
-    setT('cxNextVal', q1);
-    setT('cxDelta', '(' + (q1 === q0 ? '±0' : sign(q1-q0) + Math.abs(q1-q0)) + ' vs now)');
-    var v = $('cxVerdict');
-    v.className = 'verdict ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'burn' : '');
-    v.firstElementChild.textContent = kind === 'Mint' ? '↑' : kind === 'Burn' ? '↓' : '=';
-    $('cxSentence').innerHTML = 'You hold <strong>' + coins(c) + ' MW5</strong> worth <strong>' + usd(c*price) + '</strong>. '
-      + (kind === 'Mint' ? 'With ' + q1 + ' earthquakes you would receive <strong>+' + coins(dd) + ' MW5</strong> (' + usd(dd*price) + ').'
-        : kind === 'Burn' ? 'With ' + q1 + ' earthquakes you would lose <strong>' + coins(dd) + ' MW5</strong> (' + usd(dd*price) + ').'
-        : 'Your balance would not change.');
-    setT('cxKind', kind === 'Mint' ? 'Mint, fewer earthquakes' : kind === 'Burn' ? 'Burn, more earthquakes' : kind);
-    setT('cxFee', coins(r.fee) + ' MW5');
-    var b = $('cxPhaseBadge'); b.textContent = kind === 'Mint' ? 'Mint' : kind === 'Burn' ? 'Burn' : 'Hold'; b.className = 'badge ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'burn' : '');
-    var ph = $('cxPhase'); ph.textContent = kind; ph.className = kind === 'Mint' ? 'up' : kind === 'Burn' ? 'down' : '';
-    setT('cxAfter', coins(r.coins));
-    var ch = $('cxChange'); ch.textContent = c ? sign(dd) + Math.abs(dd/c*100).toFixed(2) + '%' : '—'; ch.className = dd > 0 ? 'up' : dd < 0 ? 'down' : '';
-    setT('cxUsd', usd(c*price) + ' → ' + usd(r.coins*price));
-    var m1 = mult(q1);
-    setT('cxLevel', '×' + m1.toFixed(3) + ' of launch');
-    $('cxProg').style.width = ((m1 - MULT_MIN) / (MULT_MAX - MULT_MIN) * 100).toFixed(1) + '%';
-    var a = Math.min(q0,q1), z = Math.max(q0,q1), sd = '';
-    for(var k=a;k<=z;k++) sd += (k===a?'M':'L') + X(Math.min(k,QMAX)).toFixed(1) + ' ' + Y(mult(k)).toFixed(1);
+    var c = readCoins(), a0 = readNow(), v = Number(nextEl.value), r = simulate(a0, v, days);
+    var gained = c*(r.mint - 1), cAfter = c + gained, kind = kindOf(r);
+    var col = kind === 'Mint' ? '#34e3a0' : kind === 'Burn' ? '#ff8a3d' : '#bcc5e3';
+    setT('cxNextVal', v);
+    setT('cxDelta', '(' + (v === a0 ? '±0' : sign(v-a0) + Math.abs(Math.round((v-a0)*10)/10)) + ' vs the average)');
+    var vd = $('cxVerdict');
+    vd.className = 'verdict ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'pool' : '');
+    vd.firstElementChild.textContent = kind === 'Mint' ? '↑' : kind === 'Burn' ? '🔥' : '=';
+    var lead = 'You hold <strong>' + coins(c) + ' MW5</strong> worth <strong>' + usd(c*price) + '</strong>. If the daily value stays at '
+      + v + ' for ' + daysTxt(days) + ', the 90-day average goes from ' + (Math.round(a0*10)/10) + ' to ' + (Math.round(r.avg*10)/10) + '. ';
+    $('cxSentence').innerHTML = lead + (kind === 'Mint'
+        ? 'You would receive <strong>+' + coins(gained) + ' MW5</strong> (' + usd(gained*price) + ').'
+        : kind === 'Burn'
+        ? 'The pool burns about <strong>' + ((1 - 1/r.price)*100).toFixed(2) + '%</strong> of its MW5. Your balance stays at <strong>' + coins(c) + ' MW5</strong> and the pool price rises about <strong>' + pct(r.price - 1) + '</strong>.'
+        : 'Nothing moves: your balance stays the same.');
+    setT('cxKind', kind === 'Mint' ? 'Mint to holders, fewer earthquakes' : kind === 'Burn' ? 'Burn from the pool, more earthquakes' : 'No change');
+    setT('cxFee', coins(c*r.fee) + ' MW5');
+    var b = $('cxPhaseBadge'); b.textContent = kind === 'Mint' ? 'Mint' : kind === 'Burn' ? 'Pool burn' : 'Hold'; b.className = 'badge ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'pool' : '');
+    var ph = $('cxPhase'); ph.textContent = kind === 'Burn' ? 'Pool burn' : kind; ph.className = kind === 'Mint' ? 'up' : kind === 'Burn' ? 'warm' : '';
+    setT('cxAfter', coins(cAfter));
+    var ch = $('cxChange'); ch.textContent = !c ? '—' : gained > 0 ? '+' + ((r.mint-1)*100).toFixed(2) + '%' : 'never down'; ch.className = gained > 0 ? 'up' : '';
+    var pp = $('cxPool'); pp.textContent = pct(r.price - 1); pp.className = r.price > 1 + 1e-12 ? 'up' : '';
+    setT('cxUsd', usd(c*price) + ' → ' + usd(cAfter*price*r.price));
+    setT('cxLevel', '×' + r.level0.toFixed(3) + ' → ×' + r.level.toFixed(3));
+    $('cxProg').style.width = ((r.level - LEVEL_MIN) / (LEVEL_MAX - LEVEL_MIN) * 100).toFixed(1) + '%';
+    var lo = Math.min(a0, r.avg), hi = Math.max(a0, r.avg), sd = '', N = 40;
+    for(var k=0;k<=N;k++){ var qq = lo + (hi-lo)*k/N; sd += (k?'L':'M') + X(qq).toFixed(1) + ' ' + Y(levelAt(qq)).toFixed(1); }
     seg.setAttribute('d', sd); seg.setAttribute('stroke', col);
-    var x0 = X(Math.min(q0,QMAX)), y0 = Y(mult(q0)), x1 = X(q1), y1 = Y(mult(q1));
+    var x0 = X(a0), y0 = Y(r.level0), x1 = X(r.avg), y1 = Y(r.level), far = Math.abs(x1-x0) > 26 || Math.abs(y1-y0) > 20;
     nowDot.setAttribute('cx', x0); nowDot.setAttribute('cy', y0);
     nowLbl.setAttribute('x', x0); nowLbl.setAttribute('y', y0 + (y1 < y0 ? 22 : -14));
     nextDot.setAttribute('cx', x1); nextDot.setAttribute('cy', y1); nextDot.setAttribute('fill', col);
     nextLbl.setAttribute('x', x1); nextLbl.setAttribute('y', y1 + (y1 < y0 ? -16 : 26)); nextLbl.setAttribute('fill', col);
-    nextLbl.style.display = q1 === q0 ? 'none' : '';
+    nextLbl.style.display = far ? '' : 'none';
     var rows = '';
-    [-50,-25,-10,-5,-1,0,1,5,10,25,50].forEach(function(st){
-      var qq = q0 + st; if(qq < 0) return;
-      var x = after(c, q0, qq), d2 = x.coins - c, kk = what(q0, qq);
-      rows += '<tr' + (st === 0 ? ' class="now"' : '') + '><td>' + qq + ' (' + (st === 0 ? 'now' : sign(st) + Math.abs(st)) + ')</td>'
-        + '<td class="' + (kk === 'Mint' ? 'up' : kk === 'Burn' ? 'down' : '') + '">' + kk + '</td>'
-        + '<td>' + coins(x.coins) + '</td>'
-        + '<td class="' + (d2 > 0 ? 'up' : d2 < 0 ? 'down' : '') + '">' + sign(d2) + coins(d2) + '</td>'
-        + '<td>' + usd(x.coins*price) + '</td></tr>';
+    [-60,-30,-10,0,10,30,60].forEach(function(st){
+      var vv = Math.round(a0) + st; if(vv < 0) return;
+      var x = simulate(a0, vv, days), g2 = c*(x.mint-1), kk = kindOf(x);
+      rows += '<tr' + (st === 0 ? ' class="now"' : '') + '><td>' + vv + ' (' + (st === 0 ? 'average' : sign(st) + Math.abs(st)) + ')</td>'
+        + '<td class="' + (kk === 'Mint' ? 'up' : kk === 'Burn' ? 'warm' : '') + '">' + (kk === 'Burn' ? 'Pool burn' : kk) + '</td>'
+        + '<td>' + coins(c + g2) + '</td>'
+        + '<td class="' + (g2 > 0 ? 'up' : '') + '">' + (g2 > 0 ? '+' + coins(g2) : '0') + '</td>'
+        + '<td class="' + (x.price > 1 + 1e-12 ? 'up' : '') + '">' + pct(x.price - 1) + '</td>'
+        + '<td>' + usd((c + g2)*price*x.price) + '</td></tr>';
     });
     $('cxRows').innerHTML = rows;
+    setT('cxDaysHead', daysTxt(days));
   }
   setT('cxPrice', price ? usd(price) : 'not set');
   setT('cxPriceDate', cfg.priceDate || '—');
@@ -425,54 +445,72 @@ function setupCalc(){
   coinsEl.addEventListener('blur', function(){ var c = readCoins(); coinsEl.value = c ? c.toLocaleString('en-US', {maximumFractionDigits: 4}) : ''; render(); });
   nowEl.addEventListener('input', function(){ nowTouched = true; setT('cxNowSrc', '(your value)'); render(); });
   nextEl.addEventListener('input', render);
-  document.querySelectorAll('.quick button').forEach(function(btn){
+  document.querySelectorAll('.quick button[data-d]').forEach(function(btn){
     btn.addEventListener('click', function(){
       nextEl.value = Math.max(0, Math.min(450, Number(nextEl.value) + Number(btn.dataset.d))); render();
     });
   });
+  document.querySelectorAll('.quick button[data-days]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      days = Number(btn.dataset.days);
+      document.querySelectorAll('.quick button[data-days]').forEach(function(o){ o.setAttribute('aria-pressed', o === btn ? 'true' : 'false'); });
+      render();
+    });
+  });
   calc.setLive = function(v){
     if(nowTouched) return;
-    nowEl.value = v; nextEl.value = Math.min(450, v + 10);
-    setT('cxNowSrc', '(live from the feed)');
+    nowEl.value = v; nextEl.value = Math.min(450, v + 30);
+    setT('cxNowSrc', '(live feed value)');
     render();
   };
   render();
 }
 
-/* ---------- storico dal 1973 (canvas) ---------- */
+/* ---------- storico dal 1973 (canvas): conteggio e livello v2 simulato giorno per giorno ---------- */
+function historyLevels(H0){
+  // ogni punto vale 15 giorni; la finestra parte piena del valore di lancio, come nel contratto
+  var ring = new Array(AVG_DAYS).fill(V0), sum = AVG_DAYS*V0, L = 1, day = 0, out = [];
+  H0.values.forEach(function(v){
+    v = Math.min(v, CAP);
+    for(var k=0;k<H0.stepDays;k++){ sum += v - ring[day % AVG_DAYS]; ring[day % AVG_DAYS] = v; day++; L = stepToward(L, levelAt(sum/AVG_DAYS)); }
+    out.push(L);
+  });
+  return out;
+}
 function drawHistory(){
   var c = $('histChart'), H0 = window.MW5_HISTORY; if(!c || !H0) return;
-  var ctx = c.getContext('2d');
+  var ctx = c.getContext('2d'), lv = historyLevels(H0);
   function render(){
     var dpr = Math.min(window.devicePixelRatio || 1, 2), W = c.clientWidth, H = Math.round(W*.36);
     if(W < 520) H = Math.round(W*.62);
     c.style.height = H+'px'; c.width = Math.round(W*dpr); c.height = Math.round(H*dpr);
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
-    var v = H0.values, n = v.length, L = 40, R = 46, T = 14, B = 28, QMAX = 800, MMAX = 1.5;
+    var v = H0.values, n = v.length, L = 40, R = 46, T = 14, B = 28, QMAX = 800, MMIN = 0.6, MMAX = 1.4;
     var t0 = Date.parse(H0.start), step = H0.stepDays*864e5;
-    var X = function(i){ return L + (W-L-R)*i/(n-1); }, Yq = function(q){ return T + (H-T-B)*(1-q/QMAX); }, Ym = function(m){ return T + (H-T-B)*(1-m/MMAX); };
+    var X = function(i){ return L + (W-L-R)*i/(n-1); }, Yq = function(q){ return T + (H-T-B)*(1-q/QMAX); }, Ym = function(m){ return T + (H-T-B)*(1-(m-MMIN)/(MMAX-MMIN)); };
     ctx.font = '11px JetBrains Mono, monospace'; ctx.textBaseline = 'middle';
     [0,200,400,600,800].forEach(function(q){
       ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L,Yq(q)); ctx.lineTo(W-R,Yq(q)); ctx.stroke();
       ctx.fillStyle = '#8d97bd'; ctx.textAlign = 'right'; ctx.fillText(q, L-6, Yq(q));
     });
-    [0,.5,1,1.5].forEach(function(m){ ctx.fillStyle = '#3ee6d0'; ctx.textAlign = 'left'; ctx.fillText('×'+m.toFixed(1), W-R+6, Ym(m)); });
+    [0.6,0.8,1,1.2,1.4].forEach(function(m){ ctx.fillStyle = '#3ee6d0'; ctx.textAlign = 'left'; ctx.fillText('×'+m.toFixed(1), W-R+6, Ym(m)); });
     ctx.textAlign = 'center'; ctx.fillStyle = '#8d97bd';
     var y0 = new Date(t0).getUTCFullYear(), y1 = new Date(t0 + step*(n-1)).getUTCFullYear(), every = W < 520 ? 15 : 5;
     for(var y = Math.ceil(y0/every)*every; y <= y1; y += every){
       var i = (Date.UTC(y,0,1) - t0)/step; if(i < 0 || i > n-1) continue;
       ctx.fillText(y, X(i), H-B+16);
     }
-    ctx.strokeStyle = 'rgba(255,210,63,.5)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(L,Yq(CAP)); ctx.lineTo(W-R,Yq(CAP)); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'right'; ctx.fillText('cap 400', W-R-6, Yq(CAP)+10);
+    ctx.strokeStyle = 'rgba(255,210,63,.5)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(L,Yq(CAP)); ctx.lineTo(W-R,Yq(CAP)); ctx.stroke();
+    ctx.strokeStyle = 'rgba(62,230,208,.35)'; ctx.beginPath(); ctx.moveTo(L,Ym(1)); ctx.lineTo(W-R,Ym(1)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'left'; ctx.fillText('cap 400', L+6, Yq(CAP)+10);
     var g = ctx.createLinearGradient(0,T,0,H-B); g.addColorStop(0,'rgba(255,77,106,.55)'); g.addColorStop(1,'rgba(255,77,106,.02)');
     ctx.beginPath(); ctx.moveTo(X(0),Yq(0));
     for(var k=0;k<n;k++) ctx.lineTo(X(k),Yq(v[k]));
     ctx.lineTo(X(n-1),Yq(0)); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
     ctx.beginPath(); for(k=0;k<n;k++){ if(k) ctx.lineTo(X(k),Yq(v[k])); else ctx.moveTo(X(k),Yq(v[k])); }
     ctx.strokeStyle = '#ff4d6a'; ctx.lineWidth = 1.3; ctx.stroke();
-    ctx.beginPath(); for(k=0;k<n;k++){ var ym = Ym(mult(v[k])); if(k) ctx.lineTo(X(k),ym); else ctx.moveTo(X(k),ym); }
-    ctx.strokeStyle = '#3ee6d0'; ctx.lineWidth = 1.8; ctx.stroke();
+    ctx.beginPath(); for(k=0;k<n;k++){ var ym = Ym(lv[k]); if(k) ctx.lineTo(X(k),ym); else ctx.moveTo(X(k),ym); }
+    ctx.strokeStyle = '#3ee6d0'; ctx.lineWidth = 2; ctx.stroke();
     [['Sumatra 2004',Date.UTC(2004,11,26)],['Tōhoku 2011',Date.UTC(2011,2,11)]].forEach(function(e){
       var i = Math.round((e[1]-t0)/step); if(i<0||i>=n) return;
       var top = i; for(var j=i;j<Math.min(n,i+6);j++) if(v[j]>v[top]) top=j;

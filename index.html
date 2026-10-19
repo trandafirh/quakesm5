@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MW5, the coin that moves with the Earth</title>
-<meta name="description" content="MW5 is a test coin driven by the Opsikom QUAKES_M5 feed: the number of magnitude 5+ earthquakes in the last 30 days. More quakes burn balances, fewer quakes mint to holders. Being prepared for Robinhood Chain.">
+<meta name="description" content="MW5 is a test coin driven by the Opsikom QUAKES_M5 feed: the number of magnitude 5+ earthquakes in the last 30 days. Holder balances never go down: more quakes burn coins from the pool, fewer quakes mint new coins to holders. Being prepared for Robinhood Chain.">
 <meta name="theme-color" content="#070a1a">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/mw5.css?v=3">
+<link rel="stylesheet" href="/assets/mw5.css?v=4">
 <script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
 <script src="/assets/config.js" defer></script>
-<script src="/assets/mw5.js?v=2" defer></script>
+<script src="/assets/mw5.js?v=3" defer></script>
 </head>
 <body>
 <div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
@@ -49,14 +49,14 @@
     <div class="hero-copy">
       <p class="pill"><i></i>Live on the Opsikom QUAKES_M5 feed</p>
       <h1>The coin that moves <span>with the Earth.</span></h1>
-      <p class="lead"><span class="long">MW5 reads one number: how many magnitude 5+ earthquakes the planet had in the last 30 days. When the Earth shakes more, holders' balances burn. When it calms down, new MW5 are minted straight into their wallets.</span><span class="short">More M5+ earthquakes in 30 days burn balances. Fewer mint new MW5 into wallets.</span></p>
+      <p class="lead"><span class="long">MW5 reads one number every day: how many magnitude 5+ earthquakes the planet had in the last 30 days. When the Earth shakes more, coins are burned from the liquidity pool and the price goes up. When it calms down, new MW5 are minted straight into holders' wallets. Your balance never goes down.</span><span class="short">More M5+ quakes burn coins from the pool. Fewer mint new MW5 into wallets. Balances never go down.</span></p>
       <div class="cta">
         <a class="btn big glow" href="/status/">Open the seismic monitor</a>
         <a class="btn big ghost" href="#simulator">Try the simulator</a>
       </div>
       <ul class="facts">
         <li class="glass"><b>7,000,000,000</b><span>total supply</span></li>
-        <li class="glass"><b>Every 3 days</b><span>new feed value</span></li>
+        <li class="glass"><b>Every day</b><span>new feed value</span></li>
         <li class="glass"><b>Robinhood Chain</b><span>target network</span></li>
       </ul>
     </div>
@@ -67,7 +67,7 @@
         <div class="live-top"><span><i class="beat"></i>QUAKES_M5 now</span><span class="badge" id="qpNet">reading…</span></div>
         <div class="live-num"><strong id="qpValue">—</strong><span>M5+ quakes<br>in 30 days</span></div>
         <canvas id="seismo" class="seismo" width="420" height="90" aria-hidden="true"></canvas>
-        <div class="live-row"><span>Balances vs. launch</span><b id="qpMult">—</b></div>
+        <div class="live-row"><span>Curve level at this value</span><b id="qpMult">—</b></div>
         <div class="live-row"><span>Round</span><b id="qpRound">—</b></div>
       </div>
       <p class="globe-note" id="globeNote">Loading the earthquakes of the last 30 days…</p>
@@ -91,16 +91,16 @@
   <div class="wrap">
     <div class="head">
       <h2>From the seismometer to your wallet</h2>
-      <p class="lead">Four steps, the same every three days.</p>
+      <p class="lead">Four steps, every day at a random hour between 09:00 and 20:00 UTC.</p>
     </div>
     <ol class="steps">
       <li class="glass"><span class="n">1</span><h3>Three catalogs count</h3><p>USGS, EMSC and GEOFON each count the magnitude 5+ earthquakes of the last 30 days. Every Opsikom node takes the median of the three.</p></li>
-      <li class="glass"><span class="n">2</span><h3>The oracle publishes</h3><p>Independent nodes sign the value. The Opsikom contract checks the quorum and publishes the median of the nodes, every 3 days.</p></li>
-      <li class="glass"><span class="n">3</span><h3>Anyone calls update()</h3><p>Whoever calls <code>update()</code> on MW5 applies the new value and earns a bounty: 0.1% of the coins burned or minted, with no cap.</p></li>
-      <li class="glass"><span class="n">4</span><h3>Wallets breathe</h3><p>Every holder's balance is multiplied by the same factor. More quakes: burn. Fewer quakes: mint. Even a change of one earthquake counts.</p></li>
+      <li class="glass"><span class="n">2</span><h3>Publish and update, together</h3><p>Independent nodes sign the value. The Opsikom relayer publishes the round and updates MW5 in the same transaction, so nobody has to remember to call <code>update()</code>. It stays open to anyone as a backup.</p></li>
+      <li class="glass"><span class="n">3</span><h3>A slow 90-day average</h3><p>The new value joins a 90-day moving average. A soft curve turns the average into a level, and the level moves at most 0.7% per update, at most once every 20 hours.</p></li>
+      <li class="glass"><span class="n">4</span><h3>Burn from the pool, or mint to you</h3><p>Level down (more quakes): that share of the V2 pool's MW5 is burned, so the price goes up. Level up (fewer quakes): holders receive new MW5, 99.3% to them and 0.7% to liquidity.</p></li>
     </ol>
     <div class="note glass">
-      <b>Only holders move.</b> The liquidity pools (V2 and V3) and the airdrop and faucet wallet are excluded: their balances never burn or mint. The price stays the one of the pools, so the value of a wallet really goes up and down with the Earth.
+      <b>Your balance never goes down.</b> A burn only touches the Uniswap V2 pool, never a wallet, and it pushes the price up. So there is no reason to sell before a burn. The catalogs are public, which is why the level moves slowly: nobody gains much by guessing tomorrow's number.
     </div>
   </div>
 </section>
@@ -110,27 +110,33 @@
   <div class="wrap">
     <div class="head">
       <h2>Move the Earth, watch your bag</h2>
-      <p class="lead">Enter how many MW5 you hold and change the earthquake count. See how many coins you would gain or lose on the next update, and what they are worth at the price set by the team.</p>
+      <p class="lead">Enter how many MW5 you hold, the 90-day average and the daily value you expect. See how many coins you would receive, or how much the pool would burn, and what your coins are worth at the price set by the team.</p>
     </div>
 
     <div class="sim-grid">
       <article class="glass card sim-in">
-        <h3 class="card-t">Your coins and the next value</h3>
+        <h3 class="card-t">Your coins and the coming days</h3>
         <label class="field">
           <span>Your MW5 coins</span>
           <span class="inp"><input id="cxCoins" type="text" inputmode="decimal" autocomplete="off" value="1,000,000"><em>MW5</em></span>
         </label>
         <label class="field">
-          <span>Earthquakes now <small id="cxNowSrc">(launch value)</small></span>
+          <span>90-day average now <small id="cxNowSrc">(launch value)</small></span>
           <span class="inp"><input id="cxNow" type="number" min="0" max="1000" step="1" value="189"><em>M5+</em></span>
         </label>
         <label class="field">
-          <span>Earthquakes after the update: <b id="cxNextVal">199</b> <small id="cxDelta">(+10 vs now)</small></span>
-          <input id="cxNext" type="range" min="0" max="450" step="1" value="199">
+          <span>Daily value from now on: <b id="cxNextVal">219</b> <small id="cxDelta">(+30 vs the average)</small></span>
+          <input id="cxNext" type="range" min="0" max="450" step="1" value="219">
           <span class="quick" role="group" aria-label="Quick changes">
             <button type="button" data-d="-25">−25</button><button type="button" data-d="-10">−10</button><button type="button" data-d="-1">−1</button><button type="button" data-d="1">+1</button><button type="button" data-d="10">+10</button><button type="button" data-d="25">+25</button>
           </span>
         </label>
+        <div class="field">
+          <span>For how long</span>
+          <span class="quick days" role="group" aria-label="Number of daily updates">
+            <button type="button" data-days="1" aria-pressed="false">1 day</button><button type="button" data-days="7" aria-pressed="false">7 days</button><button type="button" data-days="30" aria-pressed="true">30 days</button><button type="button" data-days="90" aria-pressed="false">90 days</button>
+          </span>
+        </div>
         <div class="verdict" id="cxVerdict" aria-live="polite">
           <i aria-hidden="true">✓</i>
           <div><p id="cxSentence">—</p><b id="cxKind">—</b></div>
@@ -138,34 +144,35 @@
         <div class="prices">
           <div><span>MW5 price (set by the team)</span><b id="cxPrice">—</b></div>
           <div><span>Updated</span><b id="cxPriceDate">—</b></div>
-          <div><span>0.7% to liquidity</span><b id="cxFee">—</b></div>
+          <div><span>0.7% of your mint to liquidity</span><b id="cxFee">—</b></div>
         </div>
       </article>
 
       <article class="glass card sim-chart">
         <div class="card-head">
-          <h3 class="card-t">The rebase curve<small>Balance multiplier vs. launch, by 30-day count</small></h3>
+          <h3 class="card-t">The level curve<small>Level vs. launch, by 90-day average of the daily values</small></h3>
           <span class="badge" id="cxPhaseBadge">—</span>
         </div>
-        <svg id="curveSvg" viewBox="0 0 640 340" role="img" aria-label="Balance multiplier as a function of the earthquake count"></svg>
-        <div class="prog-l"><span>Balance level after the update</span><b id="cxLevel">—</b></div>
+        <svg id="curveSvg" viewBox="0 0 640 340" role="img" aria-label="MW5 level as a function of the 90-day earthquake average"></svg>
+        <div class="prog-l"><span>Level now → after</span><b id="cxLevel">—</b></div>
         <div class="bar-prog" aria-hidden="true"><i id="cxProg"></i></div>
         <div class="sim-stats">
-          <div><span>Phase</span><b id="cxPhase">—</b></div>
+          <div><span>What happens</span><b id="cxPhase">—</b></div>
           <div><span>Your MW5 after</span><b id="cxAfter">—</b></div>
-          <div><span>Change</span><b id="cxChange">—</b></div>
-          <div><span>Value now → after</span><b id="cxUsd">—</b></div>
+          <div><span>Your coins</span><b id="cxChange">—</b></div>
+          <div><span>Pool price</span><b id="cxPool">—</b></div>
+          <div class="wide"><span>Value now → after</span><b id="cxUsd">—</b></div>
         </div>
       </article>
     </div>
 
     <div class="glass card tw">
       <table>
-        <thead><tr><th>Earthquakes</th><th>What happens</th><th>Your coins after</th><th>Gained / lost</th><th>Value after</th></tr></thead>
+        <thead><tr><th>Daily value</th><th>What happens in <span id="cxDaysHead">30 days</span></th><th>Your coins after</th><th>Received</th><th>Pool price</th><th>Value after</th></tr></thead>
         <tbody id="cxRows"></tbody>
       </table>
     </div>
-    <p class="formula">Balances follow <code>e<sup>−(Q² − 189²) / 330²</sup></code>, with Q capped at 400. Moving from one count to another multiplies your coins by the ratio of the two curve values. On a mint you receive 99.3% of it; on a burn you lose the burn plus 0.7%. The price is assumed not to move, so the dollar value changes only with your coin count. A change of more than 150 earthquakes is applied over several updates. An estimate, not financial advice.</p>
+    <p class="formula">Level <code>= 1 ± 0.3 × d / (70 + d)</code>, where d is the distance of the 90-day average from the launch value 189 (minus when there are more quakes, plus when there are fewer), with daily values capped at 400. The level moves at most 0.7% per update. The simulator starts with all 90 days at the average you enter and the level already on the curve. A level step up mints that share to holders (99.3% to you, 0.7% to liquidity); a step down burns that share of the V2 pool and never touches your wallet. The pool price shown is the V2 spot price with nothing else moving. Over the 2006–2025 data the level stays between ×0.84 and ×1.16; in a month it moves about 3% on average, never more than about +23% or −18.5%. An estimate, not financial advice.</p>
   </div>
 </section>
 
@@ -174,7 +181,7 @@
   <div class="wrap">
     <div class="head">
       <h2>Two shares. Nothing for the team.</h2>
-      <p class="lead">At launch the contract replays a "historical burn": from zero earthquakes to the real value of the feed on launch day. With 189 quakes that burn is 27.96% of the supply. Those coins are not destroyed: they go to the community, as airdrops and a faucet.</p>
+      <p class="lead">At launch the contract computes a "historical burn": the share the old curve would have burned going from zero earthquakes to the real value of the feed on launch day. With 189 quakes that is 27.96% of the supply. Those coins are not destroyed: they go to the community, as a 90-day airdrop and an on-chain faucet.</p>
     </div>
     <div class="split glass" role="img" aria-label="72.04% liquidity pools, 27.96% airdrop and faucet">
       <div class="seg liq" style="flex:72.04"><b>72.04%</b><span>Liquidity pools</span></div>
@@ -184,12 +191,12 @@
       <article class="glass card">
         <h3>Liquidity pools</h3>
         <p class="big">5,042,457,791 MW5</p>
-        <p>80% in a Uniswap-style V2 pool, 20% in a V3 pool. LP tokens and the V3 position go to the dead address: the liquidity is locked forever.</p>
+        <p>80% in a Uniswap-style V2 pool, 20% in a V3 pool. LP tokens and the V3 position go to the dead address: the liquidity is locked forever. Burns use the V2 pool only.</p>
       </article>
       <article class="glass card">
         <h3>Airdrop and faucet</h3>
         <p class="big">1,957,542,209 MW5</p>
-        <p>The coins the historical burn would have destroyed. The wallet is excluded from burn and mint, so the community share stays whole until it is given out.</p>
+        <p>80% unlocks a little every day for 90 days from launch: anyone can call <code>releaseAirdrop()</code> to send the unlocked part to the airdrop wallet. 20% is an on-chain faucet: 5,000 MW5 per wallet per day, up to 500 claims a day, for wallets holding at least 0.0005 ETH.</p>
       </article>
       <article class="glass card">
         <h3>Launch day decides</h3>
@@ -218,11 +225,12 @@
         <tbody>
           <tr><td>Buy from a pool</td><td class="yes">0.7%</td><td>The buyer receives 99.3%</td></tr>
           <tr><td>Wallet-to-wallet transfer</td><td class="yes">0.7%</td><td>The receiver gets 99.3%</td></tr>
-          <tr><td>Airdrop and faucet payouts</td><td class="yes">0.7%</td><td>The receiver gets 99.3%</td></tr>
+          <tr><td>Airdrop payouts</td><td class="yes">0.7%</td><td>The receiver gets 99.3%</td></tr>
           <tr><td>Mint (fewer quakes)</td><td class="yes">0.7%</td><td>Holders receive 99.3% of the mint</td></tr>
-          <tr><td>Burn (more quakes)</td><td class="yes">0.7%</td><td>Holders lose the burn plus 0.7% of it</td></tr>
+          <tr><td>Pool burn (more quakes)</td><td class="no">0%</td><td>Nobody: it comes out of the V2 pool, not from wallets</td></tr>
+          <tr><td>Faucet claim</td><td class="no">0%</td><td>You receive the full 5,000 MW5</td></tr>
           <tr><td>Sell to a pool</td><td class="no">0%</td><td>—</td></tr>
-          <tr><td>Keeper bounty</td><td class="no">0%</td><td>0.1% of each burn or mint, no cap</td></tr>
+          <tr><td>Update bounty</td><td class="no">0%</td><td>A small share of each burn or mint to whoever updates</td></tr>
         </tbody>
       </table>
     </div>
@@ -237,18 +245,19 @@
       <article class="glass card">
         <h3>Done</h3>
         <ul class="tick">
-          <li>QUAKES_M5 feed live on the Opsikom test network, every 3 days</li>
-          <li>MW5 contract written, with automated tests for rebase, fees, pools and bounty</li>
-          <li>Simulation of the curve on 50 years of data</li>
+          <li>QUAKES_M5 feed live on the Opsikom test network</li>
+          <li>MW5 v2 written: holder balances never go down, burns come from the pool</li>
+          <li>Automated tests for the 90-day average, the 0.7% cap, pool burn, mint, airdrop, faucet and fees</li>
+          <li>Simulation of the new curve on 50 years of data</li>
         </ul>
       </article>
       <article class="glass card">
         <h3>Next</h3>
         <ul class="tick todo">
-          <li>QUAKES_M5 on Robinhood Chain</li>
-          <li>Keeper that calls update() after every round</li>
-          <li>Faucet contract for the community share</li>
-          <li>Test deployment on Robinhood Chain</li>
+          <li>QUAKES_M5 on Robinhood Chain, updated every day at a random hour between 09:00 and 20:00 UTC</li>
+          <li>PublishAndUpdate: the feed round and the MW5 update in one transaction</li>
+          <li>Test deployment of MW5 v2 on Robinhood Chain</li>
+          <li>Faucet page to claim the daily 5,000 MW5</li>
         </ul>
       </article>
       <article class="glass card warn">
@@ -256,7 +265,7 @@
         <ul class="tick todo">
           <li>MW5 is not deployed and has no value</li>
           <li>The contract has not been audited</li>
-          <li>Balances can fall to ×0.32 of launch: this coin is volatile by design</li>
+          <li>Your coin count never falls, but the price can: the pool price still depends on what people buy and sell</li>
           <li>Nothing here is financial advice</li>
         </ul>
       </article>

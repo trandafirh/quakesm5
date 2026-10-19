@@ -10,13 +10,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/mw5.css?v=2">
+<link rel="stylesheet" href="/assets/mw5.css?v=4">
 <script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
 <script src="/assets/config.js" defer></script>
 <script src="/assets/history.js" defer></script>
-<script src="/assets/mw5.js?v=2" defer></script>
+<script src="/assets/mw5.js?v=3" defer></script>
 </head>
 <body>
 <div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
@@ -62,7 +62,7 @@
       <div class="live-num big"><strong id="qpValue">—</strong><span>M5+ earthquakes<br>in the last 30 days</span></div>
       <canvas id="seismo" class="seismo tall" width="900" height="160" aria-hidden="true"></canvas>
       <dl class="meta4">
-        <div><dt>MW5 balances vs. launch (189)</dt><dd id="qpMult">—</dd></div>
+        <div><dt>MW5 curve level at this value (launch 189)</dt><dd id="qpMult">—</dd></div>
         <div><dt>Round</dt><dd id="qpRound">—</dd></div>
         <div><dt>Published</dt><dd id="qpTime">—</dd></div>
         <div><dt>Sources</dt><dd>USGS, EMSC, GEOFON</dd></div>
@@ -78,7 +78,7 @@
         <li><div><b>USGS</b><span>United States, global catalog</span></div><em>source</em></li>
         <li><div><b>EMSC</b><span>Europe, Mediterranean centre</span></div><em>source</em></li>
         <li><div><b>GEOFON</b><span>Germany, GFZ Potsdam</span></div><em>source</em></li>
-        <li id="opsRow"><div><b>Opsikom oracle</b><span>Median of the nodes, every 3 days</span></div><em class="wait" id="opsState">checking</em></li>
+        <li id="opsRow"><div><b>Opsikom oracle</b><span>Median of the nodes, every day</span></div><em class="wait" id="opsState">checking</em></li>
       </ul>
       <p class="small">The oracle value is the median of three catalogs signed by independent nodes. The live USGS numbers on this page are one catalog only, so they can differ by a few events.</p>
     </article>
@@ -157,11 +157,11 @@
         <h2 class="card-t">Fifty years of a restless planet</h2>
         <span class="legend">
           <span><i class="ln q"></i>30-day M5+ count</span>
-          <span><i class="ln m"></i>MW5 multiplier</span>
+          <span><i class="ln m"></i>MW5 level (v2)</span>
         </span>
       </div>
-      <canvas id="histChart" width="1100" height="380" aria-label="Earthquake count and MW5 balance multiplier since 1973" role="img"></canvas>
-      <p class="small">USGS catalog since 1973, rescaled to the feed value of today, peak of every 15 days. The 2004 Sumatra and 2011 Tōhoku swarms hit the cap of 400. A simulation, not a promise.</p>
+      <canvas id="histChart" width="1100" height="380" aria-label="Earthquake count and simulated MW5 level since 1973" role="img"></canvas>
+      <p class="small">USGS catalog since 1973, rescaled to the feed value of today, peak of every 15 days. The MW5 level is simulated day by day with the v2 rules: 90-day average, soft curve, at most 0.7% a day. Below ×1 the pool burns and the price goes up; above ×1 holders receive new coins. Holder balances never go down. This series uses 15-day peaks, so it runs a little hotter than the daily feed. A simulation, not a promise.</p>
     </article>
   </div>
 </section>
