@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MW5 seismic monitor</title>
+<meta name="description" content="Live seismic monitor of MW5: the Opsikom QUAKES_M5 value, a world map of magnitude 5+ earthquakes, the latest events, magnitudes and fifty years of history.">
+<meta name="theme-color" content="#070a1a">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/mw5.css?v=2">
+<script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
+<script src="/assets/config.js" defer></script>
+<script src="/assets/history.js" defer></script>
+<script src="/assets/mw5.js?v=2" defer></script>
+</head>
+<body>
+<div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap nav-in glass">
+    <a class="brand" href="/" aria-label="MW5 home">
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+        <defs><linearGradient id="bmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a3d"/><stop offset="1" stop-color="#ff3d6e"/></linearGradient></defs>
+        <rect width="48" height="48" rx="15" fill="url(#bmg)"/>
+        <path d="M5 26h8l3-9 5 20 5-28 5 24 3-7h9" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="brand-txt"><b>MW5</b><small>Seismic monitor</small></span>
+    </a>
+    <nav class="links" aria-label="Sections">
+      <a href="#oracle">Oracle</a>
+      <a href="#map">Map</a>
+      <a href="#events">Events</a>
+      <a href="#history">History</a>
+    </nav>
+    <span class="sys" id="sysState"><i></i><span>Connecting…</span></span>
+    <a class="btn sm ghost" href="/">Back to MW5</a>
+  </div>
+</header>
+
+<main id="main">
+<section class="page-head">
+  <div class="wrap">
+    <h1>Seismic monitor</h1>
+    <p class="lead">The number that drives MW5, and the earthquakes behind it. The oracle value is read from the Opsikom contract; the events come live from the USGS catalog.</p>
+  </div>
+</section>
+
+<!-- ================= ORACLE ================= -->
+<section class="sec tight" id="oracle">
+  <div class="wrap oracle-grid">
+    <article class="glass card oracle-card" aria-live="polite">
+      <div class="card-head">
+        <h2 class="card-t"><i class="beat"></i>QUAKES_M5, oracle value</h2>
+        <span class="badge" id="qpNet">reading Opsikom…</span>
+      </div>
+      <div class="live-num big"><strong id="qpValue">—</strong><span>M5+ earthquakes<br>in the last 30 days</span></div>
+      <canvas id="seismo" class="seismo tall" width="900" height="160" aria-hidden="true"></canvas>
+      <dl class="meta4">
+        <div><dt>MW5 balances vs. launch (189)</dt><dd id="qpMult">—</dd></div>
+        <div><dt>Round</dt><dd id="qpRound">—</dd></div>
+        <div><dt>Published</dt><dd id="qpTime">—</dd></div>
+        <div><dt>Sources</dt><dd>USGS, EMSC, GEOFON</dd></div>
+      </dl>
+    </article>
+
+    <article class="glass card">
+      <div class="card-head">
+        <h2 class="card-t">Data network</h2>
+        <span class="badge ok" id="netCount">4 sources</span>
+      </div>
+      <ul class="sensors">
+        <li><div><b>USGS</b><span>United States, global catalog</span></div><em>source</em></li>
+        <li><div><b>EMSC</b><span>Europe, Mediterranean centre</span></div><em>source</em></li>
+        <li><div><b>GEOFON</b><span>Germany, GFZ Potsdam</span></div><em>source</em></li>
+        <li id="opsRow"><div><b>Opsikom oracle</b><span>Median of the nodes, every 3 days</span></div><em class="wait" id="opsState">checking</em></li>
+      </ul>
+      <p class="small">The oracle value is the median of three catalogs signed by independent nodes. The live USGS numbers on this page are one catalog only, so they can differ by a few events.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ================= NUMBERS ================= -->
+<section class="sec tight">
+  <div class="wrap">
+    <div class="stats">
+      <article class="glass stat"><span>M5+ in the last 24 hours</span><b id="st24">—</b><small>USGS</small></article>
+      <article class="glass stat"><span>M5+ in the last 7 days</span><b id="st7">—</b><small>USGS</small></article>
+      <article class="glass stat"><span>M5+ in the last 30 days</span><b id="st30">—</b><small>USGS, one catalog</small></article>
+      <article class="glass stat"><span>Strongest, 30 days</span><b id="stMax">—</b><small id="stMaxWhere">—</small></article>
+      <article class="glass stat"><span>Average magnitude</span><b id="stAvg">—</b><small>30 days</small></article>
+      <article class="glass stat"><span>Deepest, 30 days</span><b id="stDeep">—</b><small id="stDeepWhere">—</small></article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MAP ================= -->
+<section class="sec tight" id="map">
+  <div class="wrap">
+    <article class="glass card map-card">
+      <div class="card-head">
+        <h2 class="card-t">Where the Earth shook, last 30 days</h2>
+        <span class="legend">
+          <span><i class="dot m5"></i>5–5.9</span>
+          <span><i class="dot m6"></i>6–6.9</span>
+          <span><i class="dot m7"></i>7+</span>
+        </span>
+      </div>
+      <div class="map-wrap">
+        <svg id="worldMap" viewBox="0 0 800 410" role="img" aria-label="Map of magnitude 5+ earthquakes in the last 30 days"></svg>
+        <span class="map-chip" id="mapChip">loading events…</span>
+        <div class="map-tip" id="mapTip" hidden></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ================= EVENTS ================= -->
+<section class="sec tight" id="events">
+  <div class="wrap two-col">
+    <article class="glass card">
+      <div class="card-head">
+        <h2 class="card-t">Latest M5+ events</h2>
+        <span class="live-dot" aria-hidden="true"></span>
+      </div>
+      <ul class="feed" id="feed"><li class="muted-s">Loading the latest M5+ events…</li></ul>
+    </article>
+    <div class="col-stack">
+      <article class="glass card">
+        <div class="card-head">
+          <h2 class="card-t">Magnitudes</h2>
+          <span class="muted-s">events, last 30 days</span>
+        </div>
+        <svg id="magChart" class="mag-chart" viewBox="0 0 520 240" role="img" aria-label="Number of earthquakes by magnitude"></svg>
+      </article>
+      <article class="glass card">
+        <div class="card-head">
+          <h2 class="card-t">Day by day</h2>
+          <span class="muted-s">M5+ per day, last 30 days</span>
+        </div>
+        <svg id="dayChart" class="mag-chart" viewBox="0 0 520 200" role="img" aria-label="Number of magnitude 5+ earthquakes per day"></svg>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HISTORY ================= -->
+<section class="sec tight" id="history">
+  <div class="wrap">
+    <article class="glass card wide-chart">
+      <div class="card-head">
+        <h2 class="card-t">Fifty years of a restless planet</h2>
+        <span class="legend">
+          <span><i class="ln q"></i>30-day M5+ count</span>
+          <span><i class="ln m"></i>MW5 multiplier</span>
+        </span>
+      </div>
+      <canvas id="histChart" width="1100" height="380" aria-label="Earthquake count and MW5 balance multiplier since 1973" role="img"></canvas>
+      <p class="small">USGS catalog since 1973, rescaled to the feed value of today, peak of every 15 days. The 2004 Sumatra and 2011 Tōhoku swarms hit the cap of 400. A simulation, not a promise.</p>
+    </article>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in glass">
+    <span>MW5 seismic monitor. Oracle: <a href="https://opsikom.com" target="_blank" rel="noopener noreferrer">Opsikom</a> QUAKES_M5. Events: USGS.</span>
+    <a href="/">Back to MW5</a>
+  </div>
+</footer>
+</body>
+</html>

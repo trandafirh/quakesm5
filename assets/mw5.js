@@ -1,4 +1,6 @@
-/* MW5 - sito: lettura live di QUAKES_M5 da Opsikom, dashboard USGS (mappa, magnitudo, feed), simulatore, storico dal 1973. */
+/* MW5 - sito: lettura live di QUAKES_M5 da Opsikom, globo con i terremoti, monitor sismico USGS (mappa, magnitudo,
+   giorni, feed), simulatore, storico dal 1973. Lo stesso file serve la home e /status: ogni parte parte solo se nella
+   pagina ci sono i suoi elementi. */
 (function(){
 'use strict';
 
@@ -16,10 +18,11 @@ var USGS = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.
 var LAND = 'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json';
 
 var $ = function(id){ return document.getElementById(id); };
+function setT(id, t){ var e = $(id); if(e) e.textContent = t; }
 var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var nf = new Intl.NumberFormat('en-US');
 var live = { value: V0 }; // valore usato dal sismografo finche' non arriva quello vero
-function sevColor(m){ return m >= 7 ? '#ef4444' : m >= 6 ? '#f97316' : '#facc15'; }
+function sevColor(m){ return m >= 7 ? '#ff4d6a' : m >= 6 ? '#ff8a3d' : '#ffd23f'; }
 function ago(t){
   var s = (Date.now() - t)/1000;
   if(s < 3600) return Math.max(1, Math.round(s/60)) + 'm ago';
@@ -27,6 +30,24 @@ function ago(t){
   return Math.round(s/86400) + 'd ago';
 }
 function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+/* ---------- dati condivisi: terremoti USGS e terre emerse (una sola richiesta per pagina) ---------- */
+var quakesP = null, landP = null;
+function loadQuakes(){
+  if(!quakesP) quakesP = fetch(USGS).then(function(r){ return r.json(); }).then(function(j){
+    var since = Date.now() - 30*864e5;
+    return j.features.filter(function(f){ return f.properties.mag >= 5 && f.properties.time >= since; })
+      .map(function(f){ return {mag:f.properties.mag, place:f.properties.place || 'Unknown location', time:f.properties.time,
+        lon:f.geometry.coordinates[0], lat:f.geometry.coordinates[1], depth:f.geometry.coordinates[2], url:f.properties.url}; })
+      .sort(function(a,b){ return b.time - a.time; });
+  });
+  return quakesP;
+}
+function loadLand(){
+  if(!landP) landP = fetch(LAND).then(function(r){ return r.json(); }).then(function(topo){ return topojson.feature(topo, topo.objects.land); });
+  return landP;
+}
+var hasGeo = function(){ return window.d3 && window.d3.geoOrthographic && window.topojson; };
 
 /* ---------- lettura del feed ---------- */
 function call(i){
@@ -42,7 +63,8 @@ function call(i){
 function word(hex, i){ return BigInt('0x'+hex.slice(2+64*i, 2+64*(i+1))); }
 
 function setSys(ok, text){
-  var s = $('sysState'); s.className = 'sys ' + (ok ? 'ok' : 'err'); s.lastChild.textContent = text;
+  var s = $('sysState'); if(!s) return;
+  s.className = 'sys ' + (ok ? 'ok' : 'err'); s.lastChild.textContent = text;
 }
 function showLive(){
   call(0).then(function(hex){
@@ -50,33 +72,21 @@ function showLive(){
     if(ans >= (1n<<255n)) ans -= (1n<<256n);
     var v = Number(ans), m = '×' + mult(v).toFixed(3) + (v > CAP ? ' (cap)' : '');
     live.value = v;
-    $('qpValue').textContent = nf.format(v);
-    $('qpMult').textContent = m;
-    $('qpRound').textContent = '#' + round.toString();
-    $('qpTime').textContent = at ? new Date(at*1000).toISOString().slice(0,16).replace('T',' ') + ' UTC' : '—';
-    var n = $('qpNet'); n.textContent = 'Sepolia testnet'; n.className = 'badge ok';
-    $('stCount').textContent = nf.format(v);
-    $('stMult').textContent = m;
-    var o = $('opsState'); o.textContent = 'active'; o.className = '';
-    $('opsRow').className = '';
+    setT('qpValue', nf.format(v));
+    setT('qpMult', m);
+    setT('qpRound', '#' + round.toString());
+    setT('qpTime', at ? new Date(at*1000).toISOString().slice(0,16).replace('T',' ') + ' UTC' : '—');
+    var n = $('qpNet'); if(n){ n.textContent = 'Sepolia testnet'; n.className = 'badge ok'; }
+    var o = $('opsState'); if(o){ o.textContent = 'active'; o.className = ''; }
+    var r = $('opsRow'); if(r) r.className = '';
     setSys(true, 'Oracle active');
     calc.setLive(v);
   }).catch(function(){
-    var n = $('qpNet'); n.textContent = 'oracle not reachable'; n.className = 'badge err';
-    var o = $('opsState'); o.textContent = 'offline'; o.className = 'err';
-    $('opsRow').className = 'err';
+    var n = $('qpNet'); if(n){ n.textContent = 'oracle not reachable'; n.className = 'badge err'; }
+    var o = $('opsState'); if(o){ o.textContent = 'offline'; o.className = 'err'; }
+    var r = $('opsRow'); if(r) r.className = 'err';
     setSys(false, 'Oracle offline');
   });
-}
-
-/* ---------- slogan ironici ---------- */
-function slogans(){
-  var list = ['More quakes, lighter bags.', 'Fewer quakes, free mint.', 'The only chart driven by tectonic plates.', 'Diamond hands, shaky ground.', 'Not financial advice. Not seismological advice either.', 'Buy the dip. The Earth already did.'];
-  var el = $('slogan'), i = 0; if(!el || reduce) return;
-  setInterval(function(){
-    el.style.opacity = 0;
-    setTimeout(function(){ i = (i+1) % list.length; el.textContent = list[i]; el.style.opacity = 1; }, 350);
-  }, 3600);
 }
 
 /* ---------- sismografo: ampiezza legata al valore del feed ---------- */
@@ -102,73 +112,167 @@ function seismo(){
   function draw(){
     ctx.clearRect(0,0,W,H);
     var mid = H/2, amp = H*.44;
-    ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
+    ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
     var g = ctx.createLinearGradient(0,0,W,0);
-    g.addColorStop(0,'rgba(139,92,246,.15)'); g.addColorStop(.6,'rgba(249,115,22,.85)'); g.addColorStop(1,'#ef4444');
-    ctx.strokeStyle = g;
+    g.addColorStop(0,'rgba(167,139,250,.15)'); g.addColorStop(.55,'rgba(255,138,61,.9)'); g.addColorStop(1,'#ff4d6a');
+    ctx.strokeStyle = g; ctx.shadowColor = 'rgba(255,77,106,.6)'; ctx.shadowBlur = 8;
     ctx.beginPath();
     for(var i=0;i<buf.length;i++){ var x=i*2, y=mid - buf[i]*amp; if(i) ctx.lineTo(x,y); else ctx.moveTo(x,y); }
-    ctx.stroke();
+    ctx.stroke(); ctx.shadowBlur = 0;
     var y = mid - buf[buf.length-1]*amp;
-    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(W-2, y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W-3, y, 3.2, 0, Math.PI*2); ctx.fill();
   }
   if(reduce){ for(var i=0;i<buf.length;i++) buf[i]=sample(); draw(); return; }
+  var on = true;
+  if('IntersectionObserver' in window) new IntersectionObserver(function(es){ on = es[0].isIntersecting; }).observe(c);
   (function loop(){
-    buf.push(sample()); buf.push(sample()); buf.shift(); buf.shift();
-    draw();
+    if(on){ buf.push(sample()); buf.push(sample()); buf.shift(); buf.shift(); draw(); }
     requestAnimationFrame(loop);
   })();
+}
+
+/* ---------- globo: la Terra che gira, con i terremoti degli ultimi 30 giorni ---------- */
+function globe(){
+  var c = $('globe'); if(!c || !hasGeo()) return;
+  var ctx = c.getContext('2d'), W, H, R, dpr, proj, path, land = null, quakes = [], rot = [-140, -12], t0 = performance.now();
+  var drag = null, idle = 0, visible = true;
+  function size(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = c.clientWidth; H = c.clientHeight || W;
+    c.width = Math.round(W*dpr); c.height = Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    R = Math.min(W, H)/2 - 22;
+    proj = d3.geoOrthographic().scale(R).translate([W/2, H/2]).clipAngle(90).precision(.6);
+    path = d3.geoPath(proj, ctx);
+  }
+  size(); window.addEventListener('resize', size);
+  var grat = d3.geoGraticule10();
+  loadLand().then(function(l){ land = l; }).catch(function(){});
+  loadQuakes().then(function(q){
+    quakes = q.slice().sort(function(a,b){ return a.mag - b.mag; });
+    var big = q.reduce(function(m,x){ return x.mag > m.mag ? x : m; }, {mag:0});
+    setT('globeNote', q.length + ' earthquakes of magnitude 5+ in the last 30 days, live from USGS' + (big.mag ? '. Strongest: M' + big.mag.toFixed(1) + ', ' + big.place + '.' : '.') + ' Drag to turn the Earth.');
+  }).catch(function(){ setT('globeNote', 'USGS not reachable right now. Drag to turn the Earth.'); });
+
+  function draw(now){
+    var cx = W/2, cy = H/2;
+    proj.rotate(rot);
+    ctx.clearRect(0,0,W,H);
+    // atmosfera
+    var atm = ctx.createRadialGradient(cx, cy, R*.92, cx, cy, R*1.16);
+    atm.addColorStop(0,'rgba(110,170,255,.55)'); atm.addColorStop(.35,'rgba(90,150,255,.22)'); atm.addColorStop(1,'rgba(90,150,255,0)');
+    ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(cx, cy, R*1.16, 0, Math.PI*2); ctx.fill();
+    // oceano
+    var oc = ctx.createRadialGradient(cx - R*.35, cy - R*.4, R*.05, cx, cy, R);
+    oc.addColorStop(0,'#5aa0f0'); oc.addColorStop(.45,'#1f5bc0'); oc.addColorStop(1,'#0a2466');
+    ctx.fillStyle = oc; ctx.beginPath(); path({type:'Sphere'}); ctx.fill();
+    // reticolo
+    ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = .6; ctx.beginPath(); path(grat); ctx.stroke();
+    // terre emerse
+    if(land){
+      var lg = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+      lg.addColorStop(0,'#8fc27a'); lg.addColorStop(.5,'#4f8a52'); lg.addColorStop(1,'#2f5a3c');
+      ctx.fillStyle = lg; ctx.beginPath(); path(land); ctx.fill();
+      ctx.strokeStyle = 'rgba(230,255,220,.25)'; ctx.lineWidth = .6; ctx.stroke();
+    }
+    // luce dall'alto a sinistra e lato notte
+    var sh = ctx.createRadialGradient(cx - R*.45, cy - R*.5, R*.1, cx - R*.1, cy - R*.1, R*1.55);
+    sh.addColorStop(0,'rgba(255,255,255,.18)'); sh.addColorStop(.45,'rgba(255,255,255,0)'); sh.addColorStop(.8,'rgba(4,8,30,.45)'); sh.addColorStop(1,'rgba(2,4,20,.8)');
+    ctx.fillStyle = sh; ctx.beginPath(); path({type:'Sphere'}); ctx.fill();
+    // terremoti visibili
+    var center = [-rot[0], -rot[1]], tt = (now - t0)/1000;
+    for(var i=0;i<quakes.length;i++){
+      var q = quakes[i];
+      if(d3.geoDistance([q.lon, q.lat], center) > 1.5) continue;
+      var p = proj([q.lon, q.lat]); if(!p) continue;
+      var col = sevColor(q.mag), r = 1.8 + (q.mag - 5) * 2.4;
+      var gl = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], r*4);
+      gl.addColorStop(0, col); gl.addColorStop(.35, col + '88'); gl.addColorStop(1, col + '00');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(p[0], p[1], r*4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p[0], p[1], Math.max(1.2, r*.45), 0, Math.PI*2); ctx.fill();
+      if(!reduce && (Date.now() - q.time < 3*864e5 || q.mag >= 6.5)){
+        var ph = (tt*.6 + i*.137) % 1;
+        ctx.strokeStyle = col; ctx.globalAlpha = 1 - ph; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(p[0], p[1], r + ph*r*6, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+    }
+    // bordo luminoso
+    ctx.strokeStyle = 'rgba(160,200,255,.55)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
+  }
+  // trascina per ruotare
+  c.style.touchAction = 'pan-y'; c.style.cursor = 'grab';
+  c.addEventListener('pointerdown', function(e){ drag = {x:e.clientX, y:e.clientY, r:rot.slice()}; c.setPointerCapture(e.pointerId); c.style.cursor = 'grabbing'; });
+  c.addEventListener('pointermove', function(e){
+    if(!drag) return;
+    var k = 90 / R;
+    rot = [drag.r[0] + (e.clientX - drag.x) * k, Math.max(-60, Math.min(60, drag.r[1] - (e.clientY - drag.y) * k))];
+    if(reduce) draw(performance.now());
+  });
+  function up(){ drag = null; idle = performance.now(); c.style.cursor = 'grab'; }
+  c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+  if('IntersectionObserver' in window) new IntersectionObserver(function(es){ visible = es[0].isIntersecting; }).observe(c);
+  if(reduce){ draw(performance.now()); setTimeout(function(){ draw(performance.now()); }, 2500); return; }
+  var last = performance.now();
+  (function loop(now){
+    var dt = Math.min(64, now - last); last = now;
+    if(visible){
+      if(!drag && now - idle > 1500) rot[0] += dt * 0.006;  // un giro in circa un minuto
+      draw(now);
+    }
+    requestAnimationFrame(loop);
+  })(last);
 }
 
 /* ---------- SVG helper ---------- */
 var NS = 'http://www.w3.org/2000/svg';
 function s(tag, a, p){ var e=document.createElementNS(NS,tag); for(var k in a) e.setAttribute(k,a[k]); if(p) p.appendChild(e); return e; }
-var AXIS = {fill:'#64748f','font-size':11,'font-family':'JetBrains Mono, monospace'};
+var AXIS = {fill:'#8d97bd','font-size':11,'font-family':'JetBrains Mono, monospace'};
 function txt(x, y, str, extra, p){ var a = {x:x, y:y}; for(var k in AXIS) a[k]=AXIS[k]; for(k in extra) a[k]=extra[k]; var t = s('text', a, p); t.textContent = str; return t; }
 
-/* ---------- dashboard USGS: mappa, statistiche, distribuzione, feed ---------- */
-function dashboard(){
-  var svg = $('worldMap'), W = 800, H = 410, proj = null, quakes = null;
-  var hasGeo = window.d3 && window.d3.geoNaturalEarth1 && window.topojson;
-  if(hasGeo){
+/* ---------- monitor sismico: numeri, mappa, magnitudo, giorni, feed ---------- */
+function monitor(){
+  var svg = $('worldMap'); if(!svg) return;
+  var W = 800, H = 410, proj = null, quakes = null;
+  if(hasGeo()){
     proj = d3.geoNaturalEarth1().fitExtent([[8,8],[W-8,H-8]], {type:'Sphere'});
     var path = d3.geoPath(proj);
-    s('path', {d: path({type:'Sphere'}), fill:'#081020'}, svg);
+    s('path', {d: path({type:'Sphere'}), fill:'rgba(10,20,60,.6)', stroke:'rgba(150,180,255,.3)'}, svg);
     s('path', {d: path(d3.geoGraticule10()), 'class':'grat'}, svg);
-    fetch(LAND).then(function(r){ return r.json(); }).then(function(topo){
-      var land = s('path', {d: path(topojson.feature(topo, topo.objects.land)), 'class':'land'});
+    loadLand().then(function(l){
+      var land = s('path', {d: path(l), 'class':'land'});
       svg.insertBefore(land, svg.children[2] || null);
     }).catch(function(){});
   }
-  fetch(USGS).then(function(r){ return r.json(); }).then(function(j){
-    var since = Date.now() - 30*864e5;
-    quakes = j.features.filter(function(f){ return f.properties.mag >= 5 && f.properties.time >= since; })
-      .map(function(f){ return {mag:f.properties.mag, place:f.properties.place || 'Unknown location', time:f.properties.time, lon:f.geometry.coordinates[0], lat:f.geometry.coordinates[1], depth:f.geometry.coordinates[2], url:f.properties.url}; })
-      .sort(function(a,b){ return b.time - a.time; });
-    var max = quakes.reduce(function(m,q){ return q.mag > m.mag ? q : m; }, {mag:0});
-    var avg = quakes.length ? quakes.reduce(function(a,q){ return a+q.mag; }, 0)/quakes.length : 0;
-    $('stMax').textContent = max.mag ? 'M' + max.mag.toFixed(1) : '—';
-    $('stAvg').textContent = avg ? 'M' + avg.toFixed(2) : '—';
-    $('mapChip').textContent = quakes.length + ' M5+ events · 30 days';
-    drawDots();
-    magChart();
-    feed();
+  loadQuakes().then(function(q){
+    quakes = q;
+    var now = Date.now();
+    var max = q.reduce(function(m,x){ return x.mag > m.mag ? x : m; }, {mag:0});
+    var deep = q.reduce(function(m,x){ return x.depth > m.depth ? x : m; }, {depth:-1});
+    var avg = q.length ? q.reduce(function(a,x){ return a+x.mag; }, 0)/q.length : 0;
+    setT('st24', q.filter(function(x){ return now - x.time < 864e5; }).length);
+    setT('st7', q.filter(function(x){ return now - x.time < 7*864e5; }).length);
+    setT('st30', q.length);
+    setT('stMax', max.mag ? 'M' + max.mag.toFixed(1) : '—'); setT('stMaxWhere', max.mag ? max.place : '—');
+    setT('stDeep', deep.depth >= 0 ? Math.round(deep.depth) + ' km' : '—'); setT('stDeepWhere', deep.depth >= 0 ? 'M' + deep.mag.toFixed(1) + ', ' + deep.place : '—');
+    setT('stAvg', avg ? 'M' + avg.toFixed(2) : '—');
+    setT('mapChip', q.length + ' M5+ events in 30 days');
+    drawDots(); magChart(); dayChart(); feed();
   }).catch(function(){
-    $('mapChip').textContent = 'USGS not reachable right now';
-    $('feed').innerHTML = '<li class="muted-s">USGS not reachable right now.</li>';
+    setT('mapChip', 'USGS not reachable right now');
+    var f = $('feed'); if(f) f.innerHTML = '<li class="muted-s">USGS not reachable right now.</li>';
   });
 
   function drawDots(){
     if(!proj) return;
     var tip = $('mapTip'), wrap = svg.parentNode, g = s('g', {}, svg);
-    quakes.slice().sort(function(a,b){ return a.mag - b.mag; }).forEach(function(q, i){
+    quakes.slice().sort(function(a,b){ return a.mag - b.mag; }).forEach(function(q){
       var p = proj([q.lon, q.lat]); if(!p) return;
-      var r = 2 + (q.mag - 5) * 2.6, col = sevColor(q.mag);
+      var r = 2.2 + (q.mag - 5) * 2.8, col = sevColor(q.mag);
       if(Date.now() - q.time < 3*864e5 || q.mag >= 6.5) s('circle', {cx:p[0], cy:p[1], r:r, stroke:col, 'class':'pulse'}, g);
-      var c = s('circle', {cx:p[0], cy:p[1], r:r, fill:col, 'class':'q', 'fill-opacity':.9}, g);
+      var c = s('circle', {cx:p[0], cy:p[1], r:r, fill:col, 'class':'q', 'fill-opacity':.95}, g);
       function show(){
         tip.hidden = false;
-        tip.innerHTML = '<b>M' + q.mag.toFixed(1) + '</b> · ' + esc(q.place) + '<br><span class="muted-s">' + ago(q.time) + ' · depth ' + Math.round(q.depth) + ' km</span>';
+        tip.innerHTML = '<b>M' + q.mag.toFixed(1) + '</b>, ' + esc(q.place) + '<br><span class="muted-s">' + ago(q.time) + ', depth ' + Math.round(q.depth) + ' km</span>';
         var box = wrap.getBoundingClientRect(), sc = box.width / W;
         tip.style.left = Math.min(box.width - 250, Math.max(6, p[0]*sc + 10)) + 'px';
         tip.style.top = Math.max(6, p[1]*sc - 44) + 'px';
@@ -178,30 +282,46 @@ function dashboard(){
     });
   }
 
+  function bars(svgEl, W2, H2, labels, counts, colors, every){
+    var L = 34, R = 8, T = 14, B = 30;
+    var top = Math.max(4, Math.ceil(Math.max.apply(null, counts) / 4) * 4), bw = (W2-L-R)/labels.length;
+    var Y = function(v){ return T + (H2-T-B)*(1 - v/top); };
+    [0, top/4, top/2, top*3/4, top].forEach(function(v){
+      s('line', {x1:L, x2:W2-R, y1:Y(v), y2:Y(v), stroke:'rgba(255,255,255,.08)'}, svgEl);
+      txt(L-6, Y(v)+4, Math.round(v), {'text-anchor':'end'}, svgEl);
+    });
+    labels.forEach(function(lb, i){
+      var x = L + i*bw + bw*.16, w = bw*.68, h = Y(0) - Y(counts[i]);
+      s('rect', {x:x, y:Y(counts[i]), width:w, height:Math.max(h, counts[i] ? 2 : 0), rx:Math.min(6, w/2), fill:colors[i]}, svgEl);
+      if(counts[i] && labels.length <= 8) txt(x + w/2, Y(counts[i]) - 6, counts[i], {'text-anchor':'middle', fill:'#f5f7ff'}, svgEl);
+      if(i % every === 0) txt(x + w/2, H2 - 10, lb, {'text-anchor':'middle'}, svgEl);
+    });
+  }
   function magChart(){
-    var svgM = $('magChart'), W2 = 520, H2 = 240, L = 34, R = 8, T = 10, B = 30;
+    var el = $('magChart'); if(!el) return;
     var bins = [5,5.5,6,6.5,7,7.5], counts = bins.map(function(b, i){
       var hi = i === bins.length-1 ? 99 : bins[i+1];
       return quakes.filter(function(q){ return q.mag >= b && q.mag < hi; }).length;
     });
-    var top = Math.max(4, Math.ceil(Math.max.apply(null, counts) / 4) * 4), bw = (W2-L-R)/bins.length;
-    var Y = function(v){ return T + (H2-T-B)*(1 - v/top); };
-    [0, top/4, top/2, top*3/4, top].forEach(function(v){
-      s('line', {x1:L, x2:W2-R, y1:Y(v), y2:Y(v), stroke:'#1d2a44'}, svgM);
-      txt(L-6, Y(v)+4, Math.round(v), {'text-anchor':'end'}, svgM);
-    });
-    bins.forEach(function(b, i){
-      var x = L + i*bw + bw*.18, w = bw*.64, h = Y(0) - Y(counts[i]);
-      s('rect', {x:x, y:Y(counts[i]), width:w, height:Math.max(h, counts[i] ? 2 : 0), rx:4, fill:sevColor(b)}, svgM);
-      if(counts[i]) txt(x + w/2, Y(counts[i]) - 6, counts[i], {'text-anchor':'middle', fill:'#e8eefc'}, svgM);
-      txt(x + w/2, H2 - 10, i === bins.length-1 ? '7.5+' : b.toFixed(1), {'text-anchor':'middle'}, svgM);
-    });
+    bars(el, 520, 240, bins.map(function(b, i){ return i === bins.length-1 ? '7.5+' : b.toFixed(1); }), counts, bins.map(sevColor), 1);
   }
-
+  function dayChart(){
+    var el = $('dayChart'); if(!el) return;
+    var day0 = Math.floor(Date.now()/864e5) - 29, counts = [], labels = [], colors = [];
+    for(var d=0; d<30; d++){
+      var lo = (day0+d)*864e5, hi = lo + 864e5, n = quakes.filter(function(q){ return q.time >= lo && q.time < hi; });
+      counts.push(n.length);
+      var m = n.reduce(function(a,q){ return Math.max(a, q.mag); }, 5);
+      colors.push(sevColor(m));
+      var dt = new Date(lo); labels.push(dt.getUTCDate() + '/' + (dt.getUTCMonth()+1));
+    }
+    bars(el, 520, 200, labels, counts, colors, 5);
+  }
   function feed(){
-    $('feed').innerHTML = quakes.slice(0, 15).map(function(q){
+    var el = $('feed'); if(!el) return;
+    el.innerHTML = quakes.slice(0, 30).map(function(q){
       return '<li class="ev"><span class="mag" style="background:' + sevColor(q.mag) + '">M' + q.mag.toFixed(1) + '</span>'
-        + '<span class="place">' + esc(q.place) + '<small>depth ' + Math.round(q.depth) + ' km · ' + q.lat.toFixed(2) + ', ' + q.lon.toFixed(2) + '</small></span>'
+        + '<span class="place">' + esc(q.place) + '<small>depth ' + Math.round(q.depth) + ' km, ' + q.lat.toFixed(2) + ', ' + q.lon.toFixed(2) + '</small></span>'
         + '<time datetime="' + new Date(q.time).toISOString() + '">' + ago(q.time) + '</time></li>';
     }).join('') || '<li class="muted-s">No M5+ events in the last 30 days.</li>';
   }
@@ -234,33 +354,33 @@ function setupCalc(){
   var svg = $('curveSvg'), W = 640, H = 340, L = 44, R = 14, T = 16, B = 34, QMAX = 450, MMAX = 1.5;
   var X = function(q){ return L + (W-L-R)*q/QMAX; }, Y = function(m){ return T + (H-T-B)*(1-m/MMAX); };
   [0,.5,1,1.5].forEach(function(m){
-    s('line',{x1:L,x2:W-R,y1:Y(m),y2:Y(m),stroke:'#1d2a44'},svg);
+    s('line',{x1:L,x2:W-R,y1:Y(m),y2:Y(m),stroke:'rgba(255,255,255,.08)'},svg);
     txt(L-8, Y(m)+4, '×'+m.toFixed(1), {'text-anchor':'end'}, svg);
   });
   [0,100,200,300,400].forEach(function(q){ txt(X(q), H-B+20, q, {'text-anchor':'middle'}, svg); });
-  s('rect',{x:X(CAP),y:T,width:X(QMAX)-X(CAP),height:H-T-B,fill:'rgba(250,204,21,.05)'},svg);
-  txt(X(CAP)+6, T+14, 'cap', {fill:'#facc15'}, svg);
+  s('rect',{x:X(CAP),y:T,width:X(QMAX)-X(CAP),height:H-T-B,fill:'rgba(255,210,63,.07)',rx:8},svg);
+  txt(X(CAP)+6, T+14, 'cap', {fill:'#ffd23f'}, svg);
   var defs = s('defs',{},svg), lg = s('linearGradient',{id:'cg',x1:0,x2:0,y1:0,y2:1},defs);
-  s('stop',{offset:0,'stop-color':'rgba(139,92,246,.35)'},lg); s('stop',{offset:1,'stop-color':'rgba(139,92,246,0)'},lg);
+  s('stop',{offset:0,'stop-color':'rgba(167,139,250,.45)'},lg); s('stop',{offset:1,'stop-color':'rgba(167,139,250,0)'},lg);
   var d = '', area = 'M'+X(0)+' '+Y(0);
   for(var q=0;q<=QMAX;q+=3){ var p=X(q).toFixed(1)+' '+Y(mult(q)).toFixed(1); d+=(q?'L':'M')+p; area+='L'+p; }
   area += 'L'+X(QMAX)+' '+Y(0)+'Z';
   s('path',{d:area,fill:'url(#cg)'},svg);
-  s('path',{d:d,fill:'none',stroke:'#8b5cf6','stroke-width':3,'stroke-linejoin':'round'},svg);
-  s('line',{x1:L,x2:W-R,y1:Y(1),y2:Y(1),stroke:'#283a5c','stroke-dasharray':'2 4'},svg);
-  s('line',{x1:X(V0),x2:X(V0),y1:T,y2:H-B,stroke:'#2dd4bf','stroke-dasharray':'4 4',opacity:.5},svg);
-  txt(X(V0)+6, H-B-8, 'launch 189', {fill:'#2dd4bf'}, svg);
-  var seg = s('path',{fill:'none','stroke-width':6,'stroke-linecap':'round',opacity:.85},svg);
-  var nowDot = s('circle',{r:6,fill:'#e8eefc',stroke:'#070b16','stroke-width':3},svg);
-  var nowLbl = txt(0, 0, 'now', {fill:'#e8eefc','text-anchor':'middle'}, svg);
-  var nextDot = s('circle',{r:8,stroke:'#070b16','stroke-width':3},svg);
+  s('path',{d:d,fill:'none',stroke:'#b79bff','stroke-width':3.2,'stroke-linejoin':'round'},svg);
+  s('line',{x1:L,x2:W-R,y1:Y(1),y2:Y(1),stroke:'rgba(255,255,255,.2)','stroke-dasharray':'2 4'},svg);
+  s('line',{x1:X(V0),x2:X(V0),y1:T,y2:H-B,stroke:'#3ee6d0','stroke-dasharray':'4 4',opacity:.6},svg);
+  txt(X(V0)+6, H-B-8, 'launch 189', {fill:'#3ee6d0'}, svg);
+  var seg = s('path',{fill:'none','stroke-width':6,'stroke-linecap':'round',opacity:.9},svg);
+  var nowDot = s('circle',{r:6,fill:'#fff',stroke:'#0b0f2a','stroke-width':3},svg);
+  var nowLbl = txt(0, 0, 'now', {fill:'#fff','text-anchor':'middle'}, svg);
+  var nextDot = s('circle',{r:8,stroke:'#0b0f2a','stroke-width':3},svg);
   var nextLbl = txt(0, 0, 'next', {'text-anchor':'middle','font-weight':700}, svg);
 
   function render(){
     var c = readCoins(), q0 = readNow(), q1 = Number(nextEl.value), r = after(c, q0, q1), dd = r.coins - c;
-    var kind = what(q0, q1), col = kind === 'Mint' ? '#22c55e' : kind === 'Burn' ? '#ef4444' : '#9aa8c4';
-    $('cxNextVal').textContent = q1;
-    $('cxDelta').textContent = '(' + (q1 === q0 ? '±0' : sign(q1-q0) + Math.abs(q1-q0)) + ' vs now)';
+    var kind = what(q0, q1), col = kind === 'Mint' ? '#34e3a0' : kind === 'Burn' ? '#ff4d6a' : '#bcc5e3';
+    setT('cxNextVal', q1);
+    setT('cxDelta', '(' + (q1 === q0 ? '±0' : sign(q1-q0) + Math.abs(q1-q0)) + ' vs now)');
     var v = $('cxVerdict');
     v.className = 'verdict ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'burn' : '');
     v.firstElementChild.textContent = kind === 'Mint' ? '↑' : kind === 'Burn' ? '↓' : '=';
@@ -268,17 +388,16 @@ function setupCalc(){
       + (kind === 'Mint' ? 'With ' + q1 + ' earthquakes you would receive <strong>+' + coins(dd) + ' MW5</strong> (' + usd(dd*price) + ').'
         : kind === 'Burn' ? 'With ' + q1 + ' earthquakes you would lose <strong>' + coins(dd) + ' MW5</strong> (' + usd(dd*price) + ').'
         : 'Your balance would not change.');
-    $('cxKind').textContent = kind === 'Mint' ? 'Mint · fewer earthquakes' : kind === 'Burn' ? 'Burn · more earthquakes' : kind;
-    $('cxFee').textContent = coins(r.fee) + ' MW5';
-    var b = $('cxPhaseBadge'); b.textContent = kind === 'Mint' ? 'MINT' : kind === 'Burn' ? 'BURN' : 'HOLD'; b.className = 'badge ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'burn' : '');
+    setT('cxKind', kind === 'Mint' ? 'Mint, fewer earthquakes' : kind === 'Burn' ? 'Burn, more earthquakes' : kind);
+    setT('cxFee', coins(r.fee) + ' MW5');
+    var b = $('cxPhaseBadge'); b.textContent = kind === 'Mint' ? 'Mint' : kind === 'Burn' ? 'Burn' : 'Hold'; b.className = 'badge ' + (kind === 'Mint' ? 'mint' : kind === 'Burn' ? 'burn' : '');
     var ph = $('cxPhase'); ph.textContent = kind; ph.className = kind === 'Mint' ? 'up' : kind === 'Burn' ? 'down' : '';
-    $('cxAfter').textContent = coins(r.coins);
+    setT('cxAfter', coins(r.coins));
     var ch = $('cxChange'); ch.textContent = c ? sign(dd) + Math.abs(dd/c*100).toFixed(2) + '%' : '—'; ch.className = dd > 0 ? 'up' : dd < 0 ? 'down' : '';
-    $('cxUsd').textContent = usd(c*price) + ' → ' + usd(r.coins*price);
+    setT('cxUsd', usd(c*price) + ' → ' + usd(r.coins*price));
     var m1 = mult(q1);
-    $('cxLevel').textContent = '×' + m1.toFixed(3) + ' of launch';
+    setT('cxLevel', '×' + m1.toFixed(3) + ' of launch');
     $('cxProg').style.width = ((m1 - MULT_MIN) / (MULT_MAX - MULT_MIN) * 100).toFixed(1) + '%';
-    // curva: segmento da ora a dopo
     var a = Math.min(q0,q1), z = Math.max(q0,q1), sd = '';
     for(var k=a;k<=z;k++) sd += (k===a?'M':'L') + X(Math.min(k,QMAX)).toFixed(1) + ' ' + Y(mult(k)).toFixed(1);
     seg.setAttribute('d', sd); seg.setAttribute('stroke', col);
@@ -288,7 +407,6 @@ function setupCalc(){
     nextDot.setAttribute('cx', x1); nextDot.setAttribute('cy', y1); nextDot.setAttribute('fill', col);
     nextLbl.setAttribute('x', x1); nextLbl.setAttribute('y', y1 + (y1 < y0 ? -16 : 26)); nextLbl.setAttribute('fill', col);
     nextLbl.style.display = q1 === q0 ? 'none' : '';
-    // tabella scenari
     var rows = '';
     [-50,-25,-10,-5,-1,0,1,5,10,25,50].forEach(function(st){
       var qq = q0 + st; if(qq < 0) return;
@@ -301,11 +419,11 @@ function setupCalc(){
     });
     $('cxRows').innerHTML = rows;
   }
-  $('cxPrice').textContent = price ? usd(price) : 'not set';
-  $('cxPriceDate').textContent = cfg.priceDate || '—';
+  setT('cxPrice', price ? usd(price) : 'not set');
+  setT('cxPriceDate', cfg.priceDate || '—');
   coinsEl.addEventListener('input', render);
   coinsEl.addEventListener('blur', function(){ var c = readCoins(); coinsEl.value = c ? c.toLocaleString('en-US', {maximumFractionDigits: 4}) : ''; render(); });
-  nowEl.addEventListener('input', function(){ nowTouched = true; $('cxNowSrc').textContent = '(your value)'; render(); });
+  nowEl.addEventListener('input', function(){ nowTouched = true; setT('cxNowSrc', '(your value)'); render(); });
   nextEl.addEventListener('input', render);
   document.querySelectorAll('.quick button').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -315,7 +433,7 @@ function setupCalc(){
   calc.setLive = function(v){
     if(nowTouched) return;
     nowEl.value = v; nextEl.value = Math.min(450, v + 10);
-    $('cxNowSrc').textContent = '(live from the feed)';
+    setT('cxNowSrc', '(live from the feed)');
     render();
   };
   render();
@@ -335,34 +453,30 @@ function drawHistory(){
     var X = function(i){ return L + (W-L-R)*i/(n-1); }, Yq = function(q){ return T + (H-T-B)*(1-q/QMAX); }, Ym = function(m){ return T + (H-T-B)*(1-m/MMAX); };
     ctx.font = '11px JetBrains Mono, monospace'; ctx.textBaseline = 'middle';
     [0,200,400,600,800].forEach(function(q){
-      ctx.strokeStyle = '#1d2a44'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L,Yq(q)); ctx.lineTo(W-R,Yq(q)); ctx.stroke();
-      ctx.fillStyle = '#64748f'; ctx.textAlign = 'right'; ctx.fillText(q, L-6, Yq(q));
+      ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L,Yq(q)); ctx.lineTo(W-R,Yq(q)); ctx.stroke();
+      ctx.fillStyle = '#8d97bd'; ctx.textAlign = 'right'; ctx.fillText(q, L-6, Yq(q));
     });
-    [0,.5,1,1.5].forEach(function(m){ ctx.fillStyle = '#2dd4bf'; ctx.textAlign = 'left'; ctx.fillText('×'+m.toFixed(1), W-R+6, Ym(m)); });
-    ctx.textAlign = 'center'; ctx.fillStyle = '#64748f';
+    [0,.5,1,1.5].forEach(function(m){ ctx.fillStyle = '#3ee6d0'; ctx.textAlign = 'left'; ctx.fillText('×'+m.toFixed(1), W-R+6, Ym(m)); });
+    ctx.textAlign = 'center'; ctx.fillStyle = '#8d97bd';
     var y0 = new Date(t0).getUTCFullYear(), y1 = new Date(t0 + step*(n-1)).getUTCFullYear(), every = W < 520 ? 15 : 5;
     for(var y = Math.ceil(y0/every)*every; y <= y1; y += every){
       var i = (Date.UTC(y,0,1) - t0)/step; if(i < 0 || i > n-1) continue;
       ctx.fillText(y, X(i), H-B+16);
     }
-    // tetto
-    ctx.strokeStyle = 'rgba(250,204,21,.45)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(L,Yq(CAP)); ctx.lineTo(W-R,Yq(CAP)); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#facc15'; ctx.textAlign = 'right'; ctx.fillText('cap 400', W-R-6, Yq(CAP)+10);
-    // conteggio
-    var g = ctx.createLinearGradient(0,T,0,H-B); g.addColorStop(0,'rgba(239,68,68,.45)'); g.addColorStop(1,'rgba(239,68,68,.02)');
+    ctx.strokeStyle = 'rgba(255,210,63,.5)'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(L,Yq(CAP)); ctx.lineTo(W-R,Yq(CAP)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd23f'; ctx.textAlign = 'right'; ctx.fillText('cap 400', W-R-6, Yq(CAP)+10);
+    var g = ctx.createLinearGradient(0,T,0,H-B); g.addColorStop(0,'rgba(255,77,106,.55)'); g.addColorStop(1,'rgba(255,77,106,.02)');
     ctx.beginPath(); ctx.moveTo(X(0),Yq(0));
     for(var k=0;k<n;k++) ctx.lineTo(X(k),Yq(v[k]));
     ctx.lineTo(X(n-1),Yq(0)); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
     ctx.beginPath(); for(k=0;k<n;k++){ if(k) ctx.lineTo(X(k),Yq(v[k])); else ctx.moveTo(X(k),Yq(v[k])); }
-    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.2; ctx.stroke();
-    // moltiplicatore
+    ctx.strokeStyle = '#ff4d6a'; ctx.lineWidth = 1.3; ctx.stroke();
     ctx.beginPath(); for(k=0;k<n;k++){ var ym = Ym(mult(v[k])); if(k) ctx.lineTo(X(k),ym); else ctx.moveTo(X(k),ym); }
-    ctx.strokeStyle = '#2dd4bf'; ctx.lineWidth = 1.6; ctx.stroke();
-    // etichette dei grandi terremoti
+    ctx.strokeStyle = '#3ee6d0'; ctx.lineWidth = 1.8; ctx.stroke();
     [['Sumatra 2004',Date.UTC(2004,11,26)],['Tōhoku 2011',Date.UTC(2011,2,11)]].forEach(function(e){
       var i = Math.round((e[1]-t0)/step); if(i<0||i>=n) return;
       var top = i; for(var j=i;j<Math.min(n,i+6);j++) if(v[j]>v[top]) top=j;
-      ctx.fillStyle = '#e8eefc'; ctx.textAlign = 'center'; ctx.fillText(e[0], X(top), Math.max(T+8, Yq(v[top])-10));
+      ctx.fillStyle = '#f5f7ff'; ctx.textAlign = 'center'; ctx.fillText(e[0], X(top), Math.max(T+8, Yq(v[top])-10));
     });
   }
   render();
@@ -371,9 +485,9 @@ function drawHistory(){
 
 /* ---------- avvio ---------- */
 seismo();
-slogans();
+globe();
 setupCalc();
-dashboard();
+monitor();
 drawHistory();
 showLive();
 setInterval(showLive, 5*60*1000);
