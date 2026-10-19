@@ -68,6 +68,7 @@ h1,h2,h3{font-family:var(--head);margin:0;letter-spacing:-.02em}
 h1{font-size:clamp(42px,5.6vw,74px);line-height:1.02;font-weight:800}
 h1 span{background:linear-gradient(100deg,#ffb36b,#ff4d8d 50%,#b78bff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .lead{font-size:18px;color:var(--muted);max-width:60ch;margin:22px 0 0}
+.lead .short{display:none}
 .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
 .facts{list-style:none;padding:0;margin:34px 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .facts li{padding:14px 16px;border-radius:var(--r-s)}
@@ -273,6 +274,25 @@ td.yes{color:var(--orange);font-weight:700}td.no{color:var(--green);font-weight:
   .split{flex-direction:column;border-radius:24px}
   .seg{white-space:normal}
   .foot-in{border-radius:24px}
+}
+/* telefono: prima il pianeta con i terremoti, poi titolo e descrizione brevi */
+@media(max-width:640px){
+  .hero{padding:14px 0 16px}
+  .hero-in{gap:6px}
+  .earth-stage{order:-1}
+  .globe{width:min(100%,370px);margin:0 auto}
+  .live{margin-top:-46px;padding:12px 14px}
+  .live-num strong{font-size:40px}
+  .seismo{height:40px}
+  .pill{display:none}
+  h1{font-size:31px;line-height:1.08}
+  h1 span{display:inline}
+  .hero-copy .lead{font-size:15.5px;margin-top:10px}
+  .lead .long{display:none}
+  .lead .short{display:inline}
+  .cta{margin-top:18px;gap:8px}
+  .cta .btn.big{padding:13px 18px;font-size:15px}
+  .facts{margin-top:18px}
 }
 @media(prefers-reduced-motion:reduce){
   .sky i,.pill i,.beat,.live-dot,#worldMap .pulse{animation:none}
