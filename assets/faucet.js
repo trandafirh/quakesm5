@@ -51,19 +51,24 @@
     var paid = rows.filter(function(r){ return r.m10 >= 50; });
     var total = paid.reduce(function(s, r){ return s + quota(r.m10); }, 0);
     $('stPaid').textContent = nf.format(rows.last);
+    var now = Date.now()/1000, day0 = Math.floor(now/86400)*86400;
+    var today = rows.filter(function(r){ return r.observedAt >= day0; }), d24 = rows.filter(function(r){ return r.observedAt >= now - 86400; });
+    function sum(a){ return a.reduce(function(s, r){ return s + quota(r.m10); }, 0); }
+    $('dayCount').textContent = today.length + (today.length === 1 ? ' quake' : ' quakes'); $('dayPaid').textContent = '+' + nf.format(sum(today)) + ' MW5 per wallet';
+    $('d24Count').textContent = d24.length + (d24.length === 1 ? ' quake' : ' quakes'); $('d24Paid').textContent = '+' + nf.format(sum(d24)) + ' MW5 per wallet';
     $('stTotal').textContent = nf.format(total) + (rows.last > rows.length ? '+' : '');
     var top = rows[0], pl = placeOf(places, top.observedAt);
     $('lastMag').textContent = 'M' + (top.m10/10).toFixed(1);
     $('lastPlace').textContent = pl || utc(top.observedAt) + ' UTC';
     $('lastQuota').textContent = nf.format(quota(top.m10)) + ' MW5';
     $('lastAgo').textContent = ago(top.observedAt);
-    rows.forEach(function(r){
+    rows.slice(0, 6).forEach(function(r){
       var tr = document.createElement('tr');
       [ '#' + r.round, utc(r.observedAt), placeOf(places, r.observedAt) || '—', 'M' + (r.m10/10).toFixed(1), r.m10 >= 50 ? '+' + nf.format(quota(r.m10)) + ' MW5' : '0' ]
         .forEach(function(t, i){ var td = document.createElement('td'); td.textContent = t; if(i === 4) td.className = 'fc-paid'; tr.appendChild(td); });
       tb.appendChild(tr);
     });
-    if(rows.last > rows.length) $('paidNote').textContent = 'the latest ' + rows.length + ' of ' + rows.last;
+    $('paidNote').textContent = 'the latest ' + Math.min(6, rows.last) + ' of ' + nf.format(rows.last) + ', newest first';
   }
   function refresh(){ Promise.all([loadPaid(), placesP]).then(function(x){ render(x[0], x[1]); }).catch(function(){
     $('paidRows').innerHTML = '<tr><td colspan="5" class="muted-s">Robinhood Chain not reachable right now.</td></tr>'; }); }

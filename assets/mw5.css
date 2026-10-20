@@ -525,3 +525,14 @@ main .glass:not(.orb):not(.nav-in),.foot .glass{animation:none}
   .fc-pot b{font-size:21px}
 }
 @media(max-width:820px){.fc-actions .btn.big{padding:12px 16px;font-size:15px;flex:1 1 0;min-width:0}.fc-claim,.fc-last{padding:18px}}
+
+/* faucet: i due riquadri in alto alti uguali */
+.faucet-grid{align-items:stretch}
+.fc-claim,.fc-last{display:flex;flex-direction:column}
+.fc-claim .fc-msg{margin-top:auto;padding-top:14px}
+.fc-last .lf-more{margin-top:auto;padding-top:10px}
+.fc-mini{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:2px 0 12px}
+.fc-mini div{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.fc-mini span,.fc-mini small{display:block;font-size:12px;color:var(--muted)}
+.fc-mini b{display:block;font:800 21px/1.25 var(--head)}
+.fc-mini small{color:var(--green);font-weight:700}
