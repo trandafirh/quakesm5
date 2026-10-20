@@ -10,12 +10,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/mw5.css?v=4">
+<link rel="stylesheet" href="/assets/mw5.css?v=5">
 <script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
 <script src="/assets/config.js" defer></script>
-<script src="/assets/mw5.js?v=3" defer></script>
+<script src="/assets/mw5.js?v=4" defer></script>
 </head>
 <body>
 <div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
@@ -45,24 +45,19 @@
 <main id="main">
 <!-- ================= HERO ================= -->
 <section class="hero" id="top">
+  <h1 class="sr-only">MW5, a coin driven by the earthquakes of the planet</h1>
   <div class="wrap hero-in">
-    <div class="hero-copy">
-      <p class="pill"><i></i>Live on the Opsikom QUAKES_M5 feed</p>
-      <h1>The coin that moves <span>with the Earth.</span></h1>
-      <p class="lead"><span class="long">MW5 reads one number every day: how many magnitude 5+ earthquakes the planet had in the last 30 days. When the Earth shakes more, coins are burned from the liquidity pool and the price goes up. When it calms down, new MW5 are minted straight into holders' wallets. Your balance never goes down.</span><span class="short">More M5+ quakes burn coins from the pool. Fewer mint new MW5 into wallets. Balances never go down.</span></p>
-      <div class="cta">
-        <a class="btn big glow" href="/status/">Open the seismic monitor</a>
-        <a class="btn big ghost" href="#simulator">Try the simulator</a>
-      </div>
-      <ul class="facts">
-        <li class="glass"><b>7,000,000,000</b><span>total supply</span></li>
-        <li class="glass"><b>Every day</b><span>new feed value</span></li>
-        <li class="glass"><b>Robinhood Chain</b><span>target network</span></li>
-      </ul>
-    </div>
+    <ul class="orbs orbs-left" aria-label="MW5 at a glance">
+      <li><div class="orb"><b>Every day</b><span>new feed value</span></div></li>
+      <li><div class="orb chain"><img src="/assets/logos/robinhood.svg" alt="" width="40" height="40"><span>Robinhood Chain</span></div></li>
+      <li><a class="orb act" href="#simulator"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V6M4 18h16M8 14l3-4 3 2 5-6"/></svg><span>Simulator</span></a></li>
+      <li><a class="orb act hot" href="/status/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 13h4l2-6 4 12 3-9 2 3h5"/></svg><span>Seismic monitor</span></a></li>
+    </ul>
 
-    <div class="earth-stage">
-      <canvas id="globe" class="globe" width="560" height="560" aria-label="The Earth with the magnitude 5+ earthquakes of the last 30 days" role="img"></canvas>
+    <div class="earth-stage" id="earthStage">
+      <div class="orbit-ring" aria-hidden="true"></div>
+      <canvas id="globe" class="globe" width="640" height="640" aria-label="The Earth with the magnitude 5+ earthquakes of the last 30 days. Touch it to make it shake." role="img"></canvas>
+      <p class="globe-note" id="globeNote">Loading the earthquakes of the last 30 days…</p>
       <div class="live glass" aria-live="polite">
         <div class="live-top"><span><i class="beat"></i>QUAKES_M5 now</span><span class="badge" id="qpNet">reading…</span></div>
         <div class="live-num"><strong id="qpValue">—</strong><span>M5+ quakes<br>in 30 days</span></div>
@@ -70,8 +65,14 @@
         <div class="live-row"><span>Curve level at this value</span><b id="qpMult">—</b></div>
         <div class="live-row"><span>Round</span><b id="qpRound">—</b></div>
       </div>
-      <p class="globe-note" id="globeNote">Loading the earthquakes of the last 30 days…</p>
     </div>
+
+    <ul class="orbs orbs-right" aria-label="Where the data comes from">
+      <li><a class="orb logo" href="https://earthquake.usgs.gov/" target="_blank" rel="noopener noreferrer"><img src="/assets/logos/usgs.svg" alt="" width="64" height="64"><span>USGS</span></a></li>
+      <li><a class="orb logo" href="https://www.emsc-csem.org/" target="_blank" rel="noopener noreferrer"><img src="/assets/logos/emsc.svg" alt="" width="64" height="64"><span>EMSC</span></a></li>
+      <li><a class="orb logo" href="https://geofon.gfz.de/" target="_blank" rel="noopener noreferrer"><img src="/assets/logos/geofon.svg" alt="" width="64" height="64"><span>GEOFON</span></a></li>
+      <li><a class="orb logo" href="https://opsikom.com/" target="_blank" rel="noopener noreferrer"><img src="/assets/logos/opsikom.svg" alt="" width="64" height="64"><span>Opsikom</span></a></li>
+    </ul>
   </div>
 </section>
 
@@ -275,9 +276,26 @@
 </main>
 
 <footer class="foot">
-  <div class="wrap foot-in glass">
-    <span>MW5, a test coin on the <a href="https://opsikom.com" target="_blank" rel="noopener noreferrer">Opsikom</a> earthquake feed.</span>
-    <span>Data: USGS, EMSC, GEOFON. Network: Robinhood Chain (in preparation).</span>
+  <div class="wrap">
+    <div class="foot-live" id="footLive" aria-label="Live numbers">
+      <div class="fl glass"><span>M5+ quakes, 30 days</span><b id="ftCount">—</b><small>Opsikom QUAKES_M5</small></div>
+      <div class="fl glass"><span>Strongest this month</span><b id="ftBig">—</b><small id="ftBigWhere">USGS</small></div>
+      <div class="fl glass"><span>Latest M5+</span><b id="ftLast">—</b><small id="ftLastWhere">USGS</small></div>
+      <div class="fl glass"><span>Curve level now</span><b id="ftLevel">—</b><small>1 = launch</small></div>
+    </div>
+    <div class="foot-grid glass">
+      <div class="fg-brand">
+        <a class="brand" href="/" aria-label="MW5 home">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="15" fill="url(#bmg)"/><path d="M5 26h8l3-9 5 20 5-28 5 24 3-7h9" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="brand-txt"><b>MW5</b><small>Moves with the Earth</small></span>
+        </a>
+        <p>A test coin on the Opsikom earthquake feed. Balances never go down: more quakes burn from the pool, fewer quakes mint to holders.</p>
+      </div>
+      <nav class="fg-col" aria-label="Explore"><h4>Explore</h4><a href="/status/">Seismic monitor</a><a href="#how">How it works</a><a href="#simulator">Simulator</a><a href="#tokenomics">Tokenomics</a><a href="#roadmap">Roadmap</a></nav>
+      <nav class="fg-col" aria-label="Data"><h4>Data</h4><a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS</a><a href="https://www.emsc-csem.org/" target="_blank" rel="noopener noreferrer">EMSC</a><a href="https://geofon.gfz.de/" target="_blank" rel="noopener noreferrer">GEOFON</a><a href="https://opsikom.com/" target="_blank" rel="noopener noreferrer">Opsikom oracle</a></nav>
+      <div class="fg-col"><h4>Network</h4><span class="fg-chain"><img src="/assets/logos/robinhood.svg" alt="" width="20" height="20">Robinhood Chain</span><span>Test network, in preparation</span><span>New value every day, 09:00–20:00 UTC</span></div>
+    </div>
+    <p class="foot-legal">MW5 is not deployed and has no value. Not audited. Nothing here is financial advice.</p>
   </div>
 </footer>
 </body>

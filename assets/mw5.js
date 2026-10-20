@@ -78,6 +78,8 @@ function showLive(){
     setT('qpValue', nf.format(v));
     setT('qpMult', m);
     setT('qpRound', '#' + round.toString());
+    setT('ftCount', nf.format(v));
+    setT('ftLevel', m);
     setT('qpTime', at ? new Date(at*1000).toISOString().slice(0,16).replace('T',' ') + ' UTC' : '—');
     var n = $('qpNet'); if(n){ n.textContent = 'Sepolia testnet'; n.className = 'badge ok'; }
     var o = $('opsState'); if(o){ o.textContent = 'active'; o.className = ''; }
@@ -104,6 +106,7 @@ function seismo(){
     buf = new Array(Math.ceil(W/2)).fill(0);
   }
   size(); window.addEventListener('resize', size);
+  window.addEventListener('mw5:quake', function(){ quake = 1.6; });
   function sample(){
     var base = 0.10 + 0.55 * Math.min(live.value, CAP) / CAP;      // piu' terremoti, linea piu' nervosa
     if(Math.random() < 0.004 + live.value/90000) quake = 1;          // ogni tanto una scossa
@@ -138,7 +141,7 @@ function seismo(){
 function globe(){
   var c = $('globe'); if(!c || !hasGeo()) return;
   var ctx = c.getContext('2d'), W, H, R, dpr, proj, path, land = null, quakes = [], rot = [-140, -12], t0 = performance.now();
-  var drag = null, idle = 0, visible = true;
+  var drag = null, idle = 0, visible = true, taps = [];
   function size(){
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = c.clientWidth; H = c.clientHeight || W;
@@ -199,12 +202,47 @@ function globe(){
         ctx.beginPath(); ctx.arc(p[0], p[1], r + ph*r*6, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1;
       }
     }
+    // onde sismiche dove e' stata toccata la Terra
+    for(var k = taps.length - 1; k >= 0; k--){
+      var tp = taps[k], age = (now - tp.t) / 1000;
+      if(age > 2.6){ taps.splice(k, 1); continue; }
+      if(d3.geoDistance([tp.lon, tp.lat], center) > 1.5) continue;
+      var pp = proj([tp.lon, tp.lat]); if(!pp) continue;
+      for(var w = 0; w < 3; w++){
+        var ph2 = age * 1.1 - w * .28; if(ph2 <= 0 || ph2 > 1.6) continue;
+        ctx.strokeStyle = w ? 'rgba(255,138,61,' + (0.8 - ph2/2) + ')' : 'rgba(255,255,255,' + (0.9 - ph2/1.8) + ')';
+        ctx.lineWidth = 2.2 - w*.5; ctx.beginPath(); ctx.arc(pp[0], pp[1], 6 + ph2 * R * .28, 0, Math.PI*2); ctx.stroke();
+      }
+      var core = ctx.createRadialGradient(pp[0], pp[1], 0, pp[0], pp[1], 18);
+      core.addColorStop(0, 'rgba(255,77,106,' + Math.max(0, 1 - age/1.2) + ')'); core.addColorStop(1, 'rgba(255,77,106,0)');
+      ctx.fillStyle = core; ctx.beginPath(); ctx.arc(pp[0], pp[1], 18, 0, Math.PI*2); ctx.fill();
+    }
     // bordo luminoso
     ctx.strokeStyle = 'rgba(160,200,255,.55)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
   }
+  // terremoto: la Terra trema, le bolle ai lati e la scheda live tremano, il sismografo fa un picco
+  var stage = $('earthStage'), lastShake = 0;
+  function shake(){
+    var now = performance.now(); if(reduce || now - lastShake < 500) return; lastShake = now;
+    if(stage){ stage.classList.remove('quake'); void stage.offsetWidth; stage.classList.add('quake'); }
+    document.querySelectorAll('.orb, .live').forEach(function(o, i){
+      setTimeout(function(){ o.classList.remove('tremble'); void o.offsetWidth; o.classList.add('tremble'); }, 60 + i * 45 + Math.random() * 80);
+    });
+    window.dispatchEvent(new Event('mw5:quake'));
+    if(navigator.vibrate) try{ navigator.vibrate([40, 30, 60]); }catch(_){}
+  }
+  document.addEventListener('animationend', function(e){
+    if(e.animationName === 'quake') e.target.parentNode.classList.remove('quake');
+    if(e.animationName === 'tremble') e.target.classList.remove('tremble');
+  });
   // trascina per ruotare
   c.style.touchAction = 'pan-y'; c.style.cursor = 'grab';
-  c.addEventListener('pointerdown', function(e){ drag = {x:e.clientX, y:e.clientY, r:rot.slice()}; c.setPointerCapture(e.pointerId); c.style.cursor = 'grabbing'; });
+  c.addEventListener('pointerdown', function(e){
+    drag = {x:e.clientX, y:e.clientY, r:rot.slice()}; c.setPointerCapture(e.pointerId); c.style.cursor = 'grabbing';
+    var b = c.getBoundingClientRect(), ll = proj.invert && proj.invert([e.clientX - b.left, e.clientY - b.top]);
+    if(ll && d3.geoDistance(ll, [-rot[0], -rot[1]]) < Math.PI/2) taps.push({lon:ll[0], lat:ll[1], t:performance.now()});
+    shake();
+  });
   c.addEventListener('pointermove', function(e){
     if(!drag) return;
     var k = 90 / R;
@@ -224,6 +262,23 @@ function globe(){
     }
     requestAnimationFrame(loop);
   })(last);
+}
+
+/* ---------- fondo pagina: numeri live che vibrano a turno ---------- */
+function footLive(){
+  var box = $('footLive'); if(!box) return;
+  loadQuakes().then(function(q){
+    if(!q.length) return;
+    var big = q.reduce(function(m,x){ return x.mag > m.mag ? x : m; }, q[0]), last = q[0];
+    setT('ftBig', 'M' + big.mag.toFixed(1)); setT('ftBigWhere', big.place);
+    setT('ftLast', ago(last.time)); setT('ftLastWhere', 'M' + last.mag.toFixed(1) + ', ' + last.place);
+  }).catch(function(){});
+  if(reduce) return;
+  var tiles = box.querySelectorAll('.fl'), i = 0;
+  setInterval(function(){
+    var t = tiles[i++ % tiles.length]; t.classList.remove('vib'); void t.offsetWidth; t.classList.add('vib');
+    setTimeout(function(){ t.classList.remove('vib'); }, 900);
+  }, 2600);
 }
 
 /* ---------- SVG helper ---------- */
@@ -523,6 +578,7 @@ function drawHistory(){
 
 /* ---------- avvio ---------- */
 seismo();
+footLive();
 globe();
 setupCalc();
 monitor();
