@@ -62,13 +62,13 @@
     $('lastPlace').textContent = pl || utc(top.observedAt) + ' UTC';
     $('lastQuota').textContent = nf.format(quota(top.m10)) + ' MW5';
     $('lastAgo').textContent = ago(top.observedAt);
-    rows.slice(0, 6).forEach(function(r){
+    rows.slice(0, 8).forEach(function(r){
       var tr = document.createElement('tr');
       [ '#' + r.round, utc(r.observedAt), placeOf(places, r.observedAt) || '—', 'M' + (r.m10/10).toFixed(1), r.m10 >= 50 ? '+' + nf.format(quota(r.m10)) + ' MW5' : '0' ]
         .forEach(function(t, i){ var td = document.createElement('td'); td.textContent = t; if(i === 4) td.className = 'fc-paid'; tr.appendChild(td); });
       tb.appendChild(tr);
     });
-    $('paidNote').textContent = 'the latest ' + Math.min(6, rows.last) + ' of ' + nf.format(rows.last) + ', newest first';
+    $('paidNote').textContent = 'the latest ' + Math.min(8, rows.last) + ' of ' + nf.format(rows.last) + ', newest first';
   }
   function refresh(){ Promise.all([loadPaid(), placesP]).then(function(x){ render(x[0], x[1]); }).catch(function(){
     $('paidRows').innerHTML = '<tr><td colspan="5" class="muted-s">Robinhood Chain not reachable right now.</td></tr>'; }); }
