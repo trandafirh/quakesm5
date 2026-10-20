@@ -536,3 +536,7 @@ main .glass:not(.orb):not(.nav-in),.foot .glass{animation:none}
 .fc-mini span,.fc-mini small{display:block;font-size:12px;color:var(--muted)}
 .fc-mini b{display:block;font:800 21px/1.25 var(--head)}
 .fc-mini small{color:var(--green);font-weight:700}
+
+/* faucet: Claim e Check my pot sempre uno accanto all altro */
+.fc-actions{flex-wrap:nowrap}
+.fc-actions .btn{flex:1 1 0;min-width:0;padding-left:14px;padding-right:14px;white-space:nowrap}
