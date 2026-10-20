@@ -510,3 +510,7 @@ main .glass:not(.orb):not(.nav-in),.foot .glass{animation:none}
 .fc-ex li.tot{background:rgba(52,227,160,.12)}.fc-ex li.tot em{color:var(--ink);font-weight:700}
 .fc-ex li.reset{background:rgba(255,77,106,.12)}.fc-ex li.reset strong{color:#ff8fa3}
 @media(max-width:820px){.fc-stats{grid-template-columns:1fr 1fr}.fc-explain{grid-template-columns:minmax(0,1fr)}}
+
+/* "claim" nel titolo: porta al faucet */
+.tag-claim{color:#34e3a0;font-weight:800;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.tag-claim:hover{color:#fff}
