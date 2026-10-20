@@ -455,3 +455,9 @@ main .glass:not(.orb):nth-child(4n){animation-delay:-7s}
 
 /* su telefono niente bolle con i loghi delle fonti */
 @media(max-width:820px){.orbs-right{display:none}}
+
+/* la pagina non deve muoversi da sola: niente fluttuazione per i riquadri, niente correzione automatica dello scroll */
+html{overflow-anchor:none}
+main .glass:not(.orb):not(.nav-in),.foot .glass{animation:none}
+.live.tremble,.quakes-live.tremble{animation:tremble .6s cubic-bezier(.36,.07,.19,.97)}
+.fl.vib{animation:vib .8s cubic-bezier(.36,.07,.19,.97)}
