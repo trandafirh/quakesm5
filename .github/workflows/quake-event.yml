@@ -1,0 +1,47 @@
+# MW5 publishes the earthquakes that pay its faucet.
+# Every 10 minutes this job collects the signatures of the four Opsikom operators for the next M5+ earthquake
+# (feed QUAKE_EVENT on Robinhood Chain testnet) and sends them to the Opsikom contract. MW5 pays the gas with its own
+# wallet: its private key is the repository secret MW5_RELAYER_KEY. Without that secret the job does nothing.
+name: QUAKE_EVENT relayer
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: quake-event
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      RELAYER_KEY: ${{ secrets.MW5_RELAYER_KEY }}
+      RPC_URL: https://rpc.testnet.chain.robinhood.com
+      HUB_ADDRESS: "0xEDED95E0cB80A8Da4aeF1cd2c3fa8b6960Ede9b6"
+      HUB_VERSION: "2"
+      FEED: QUAKE_EVENT
+      # n2 and n3 answer directly; n1 and n4 run on a server that is not reachable from outside, so their signed
+      # reports are mirrored by Opsikom
+      NODES: http://5.250.187.22:8443/rh,http://31.70.148.66/opsikom/rh,http://31.70.148.66/opsikom-api/mirror/n1,http://31.70.148.66/opsikom-api/mirror/n4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: relay
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        if: env.RELAYER_KEY != ''
+        run: npm install --prefix relay --no-audit --no-fund
+      - name: Publish the next earthquake
+        if: env.RELAYER_KEY != ''
+        run: node relay/relayer.js || echo "no new earthquake to publish, or not enough signatures yet"
+      - name: No key yet
+        if: env.RELAYER_KEY == ''
+        run: echo "Add the MW5_RELAYER_KEY secret to let MW5 publish the earthquakes."

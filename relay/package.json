@@ -1,0 +1,6 @@
+{
+  "name": "mw5-quake-event-relayer",
+  "private": true,
+  "description": "Publishes each M5+ earthquake signed by the Opsikom nodes (feed QUAKE_EVENT) on Robinhood Chain testnet. MW5 pays the gas.",
+  "dependencies": { "ethers": "6.13.4" }
+}
