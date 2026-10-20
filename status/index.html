@@ -10,13 +10,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/mw5.css?v=9">
+<link rel="stylesheet" href="/assets/mw5.css?v=10">
 <script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
 <script src="/assets/config.js" defer></script>
 <script src="/assets/history.js" defer></script>
-<script src="/assets/mw5.js?v=5" defer></script>
+<script src="/assets/mw5.js?v=6" defer></script>
 </head>
 <body>
 <div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
@@ -30,7 +30,7 @@
         <rect width="48" height="48" rx="15" fill="url(#bmg)"/>
         <path d="M5 26h8l3-9 5 20 5-28 5 24 3-7h9" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span class="brand-txt"><b>MW5</b><small>Seismic monitor</small></span>
+      <span class="brand-txt"><b><span class="sys" id="sysState" title="Connecting to the oracle…" aria-label="Oracle: connecting"><i></i></span>MW5</b><small>Seismic monitor</small></span>
     </a>
     <nav class="links" aria-label="Sections">
       <a href="#oracle">Oracle</a>
@@ -38,7 +38,6 @@
       <a href="#events">Events</a>
       <a href="#history">History</a>
     </nav>
-    <span class="sys" id="sysState"><i></i><span>Connecting…</span></span>
     <a class="btn sm ghost" href="/">Back to MW5</a>
   </div>
 </header>
@@ -183,7 +182,7 @@
         </a>
         <p>A test coin on the Opsikom earthquake feed. Balances never go down: more quakes burn from the pool, fewer quakes mint to holders.</p>
       </div>
-      <nav class="fg-col" aria-label="Explore"><h4>Explore</h4><a href="/status/">Seismic monitor</a><a href="/#how">How it works</a><a href="/#simulator">Simulator</a><a href="/#tokenomics">Tokenomics</a><a href="/#roadmap">Roadmap</a></nav>
+      <nav class="fg-col" aria-label="Explore"><h4>Explore</h4><a href="/status/">Seismic monitor</a><a href="/faucet/">Faucet</a><a href="/#how">How it works</a><a href="/#simulator">Simulator</a><a href="/#tokenomics">Tokenomics</a><a href="/#roadmap">Roadmap</a></nav>
       <nav class="fg-col" aria-label="Data"><h4>Data</h4><a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS</a><a href="https://www.emsc-csem.org/" target="_blank" rel="noopener noreferrer">EMSC</a><a href="https://geofon.gfz.de/" target="_blank" rel="noopener noreferrer">GEOFON</a><a href="https://opsikom.com/" target="_blank" rel="noopener noreferrer">Opsikom oracle</a></nav>
       <div class="fg-col"><h4>Network</h4><span class="fg-chain"><img src="/assets/logos/robinhood.svg" alt="" width="20" height="20">Robinhood Chain</span><span>Test network, in preparation</span><span>New value every day, 09:00–20:00 UTC</span></div>
     </div>

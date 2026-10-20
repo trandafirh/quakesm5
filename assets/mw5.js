@@ -67,7 +67,7 @@ function word(hex, i){ return BigInt('0x'+hex.slice(2+64*i, 2+64*(i+1))); }
 
 function setSys(ok, text){
   var s = $('sysState'); if(!s) return;
-  s.className = 'sys ' + (ok ? 'ok' : 'err'); s.lastChild.textContent = text;
+  s.className = 'sys ' + (ok ? 'ok' : 'err'); s.title = text; s.setAttribute('aria-label', text);
 }
 function showLive(){
   call(0).then(function(hex){

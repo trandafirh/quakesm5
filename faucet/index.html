@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MW5 faucet</title>
+<meta name="description" content="The MW5 faucet: 5,000 free MW5 a day for every wallet, straight from the MW5 contract on Robinhood Chain testnet.">
+<meta name="theme-color" content="#070a1a">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/mw5.css?v=10">
+<script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
+<script src="/assets/config.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" defer></script>
+<script src="/assets/mw5.js?v=6" defer></script>
+<script src="/assets/faucet.js?v=1" defer></script>
+</head>
+<body>
+<div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap nav-in glass">
+    <a class="brand" href="/" aria-label="MW5 home">
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+        <defs><linearGradient id="bmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a3d"/><stop offset="1" stop-color="#ff3d6e"/></linearGradient></defs>
+        <rect width="48" height="48" rx="15" fill="url(#bmg)"/>
+        <path d="M5 26h8l3-9 5 20 5-28 5 24 3-7h9" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="brand-txt"><b><span class="sys" id="sysState" title="Connecting to the oracle…" aria-label="Oracle: connecting"><i></i></span>MW5</b><small>Faucet</small></span>
+    </a>
+    <nav class="links" aria-label="Sections"><a href="/">Home</a><a href="/status/">Seismic monitor</a><a href="/#simulator">Simulator</a></nav>
+    <a class="btn sm ghost" href="/">Back to MW5</a>
+  </div>
+</header>
+
+<main id="main">
+<section class="page-head">
+  <div class="wrap">
+    <h1>The MW5 faucet</h1>
+    <p class="lead">5,000 free MW5 every day, for every wallet. They come straight from the MW5 contract: no sign-up, no team in the middle.</p>
+  </div>
+</section>
+
+<section class="sec tight">
+  <div class="wrap faucet-grid">
+    <article class="glass card fc-claim">
+      <div class="card-head"><h2 class="card-t"><i class="beat"></i>Claim today</h2><span class="badge" id="fcNet">Robinhood Chain testnet</span></div>
+      <div class="live-num big"><strong>5,000</strong><span>MW5 per wallet<br>every day</span></div>
+      <div class="fc-bar"><div class="fc-fill" id="fcFill"></div></div>
+      <p class="fc-meta"><span id="fcLeft">500 claims a day</span><span id="fcReset">Resets at 00:00 UTC</span></p>
+      <div class="fc-actions">
+        <button class="btn big glow" id="fcConnect" type="button">Connect wallet</button>
+        <button class="btn big ghost" id="fcClaim" type="button" disabled>Claim 5,000 MW5</button>
+      </div>
+      <p class="fc-msg" id="fcMsg" role="status" aria-live="polite"></p>
+    </article>
+
+    <div class="fc-rules">
+      <div class="glass fc-rule"><b>Once a day</b><span>Each wallet can claim once per UTC day. A new day starts at 00:00 UTC.</span></div>
+      <div class="glass fc-rule"><b>500 a day</b><span>At most 500 claims a day for everyone together: first come, first served.</span></div>
+      <div class="glass fc-rule"><b>Wallets only</b><span>Contracts and bots cannot claim. You need at least 0.0005 test ETH for the network fee.</span></div>
+      <div class="glass fc-rule"><b>No fee</b><span>You receive the full 5,000 MW5. The faucet is 20% of the community share, set aside in the contract.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec tight">
+  <div class="wrap">
+    <div class="glass card fc-how">
+      <h2 class="card-t">How to claim</h2>
+      <ol class="fc-steps">
+        <li><b>Get a wallet.</b> MetaMask or any browser wallet works.</li>
+        <li><b>Connect.</b> The page adds Robinhood Chain testnet to your wallet if it is missing.</li>
+        <li><b>Have a little test ETH.</b> 0.0005 ETH is enough for the network fee.</li>
+        <li><b>Claim.</b> Confirm in your wallet: 5,000 MW5 arrive in a few seconds. Come back tomorrow for more.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-live" id="footLive" aria-label="Live numbers">
+      <div class="fl glass"><span>M5+ quakes, 30 days</span><b id="ftCount">—</b><small>Opsikom QUAKES_M5</small></div>
+      <div class="fl glass"><span>Strongest this month</span><b id="ftBig">—</b><small id="ftBigWhere">USGS</small></div>
+      <div class="fl glass"><span>Latest M5+</span><b id="ftLast">—</b><small id="ftLastWhere">USGS</small></div>
+      <div class="fl glass"><span>Curve level now</span><b id="ftLevel">—</b><small>1 = launch</small></div>
+    </div>
+    <div class="foot-grid glass">
+      <div class="fg-brand">
+        <a class="brand" href="/" aria-label="MW5 home">
+          <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="15" fill="url(#bmg)"/><path d="M5 26h8l3-9 5 20 5-28 5 24 3-7h9" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="brand-txt"><b>MW5</b><small>Moves with the Earth</small></span>
+        </a>
+        <p>A test coin on the Opsikom earthquake feed. Balances never go down: more quakes burn from the pool, fewer quakes mint to holders.</p>
+      </div>
+      <nav class="fg-col" aria-label="Explore"><h4>Explore</h4><a href="/status/">Seismic monitor</a><a href="/faucet/">Faucet</a><a href="/#how">How it works</a><a href="/#simulator">Simulator</a><a href="/#tokenomics">Tokenomics</a><a href="/#roadmap">Roadmap</a></nav>
+      <nav class="fg-col" aria-label="Data"><h4>Data</h4><a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS</a><a href="https://www.emsc-csem.org/" target="_blank" rel="noopener noreferrer">EMSC</a><a href="https://geofon.gfz.de/" target="_blank" rel="noopener noreferrer">GEOFON</a><a href="https://opsikom.com/" target="_blank" rel="noopener noreferrer">Opsikom oracle</a></nav>
+      <div class="fg-col"><h4>Network</h4><span class="fg-chain"><img src="/assets/logos/robinhood.svg" alt="" width="20" height="20">Robinhood Chain</span><span>Test network, in preparation</span><span>New value every day, 09:00–20:00 UTC</span></div>
+    </div>
+    <p class="foot-legal">MW5 is not deployed and has no value. Not audited. Nothing here is financial advice.</p>
+  </div>
+</footer>
+</body>
+</html>

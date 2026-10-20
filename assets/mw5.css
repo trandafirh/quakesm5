@@ -461,3 +461,27 @@ html{overflow-anchor:none}
 main .glass:not(.orb):not(.nav-in),.foot .glass{animation:none}
 .live.tremble,.quakes-live.tremble{animation:tremble .6s cubic-bezier(.36,.07,.19,.97)}
 .fl.vib{animation:vib .8s cubic-bezier(.36,.07,.19,.97)}
+
+/* puntino dello stato dell'oracolo davanti a MW5 */
+.brand-txt b{display:flex;align-items:center;gap:8px}
+.brand-txt .sys{display:inline-flex}
+.brand-txt .sys i{width:8px;height:8px}
+
+/* pagina faucet */
+.faucet-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start}
+.fc-claim{padding:24px}
+.fc-bar{height:10px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;margin:14px 0 8px}
+.fc-fill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#34e3a0,#ffd23f,#ff4d6a);transition:width .6s}
+.fc-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0;font-size:13px;color:var(--muted)}
+.fc-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.fc-actions .btn:disabled{opacity:.5;cursor:not-allowed}
+.fc-msg{margin:14px 0 0;font-size:14px;font-weight:600;color:var(--muted);min-height:1.4em}
+.fc-msg.ok{color:var(--green)}.fc-msg.err{color:#ff8fa3}.fc-msg a{color:inherit}
+.fc-rules{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.fc-rule{padding:16px 18px;border-radius:22px}
+.fc-rule b{display:block;font:800 17px var(--head);margin-bottom:4px}
+.fc-rule span{font-size:13.5px;color:var(--muted);line-height:1.5}
+.fc-how{padding:24px}
+.fc-steps{margin:12px 0 0;padding-left:22px;display:grid;gap:8px;color:var(--muted)}
+.fc-steps b{color:var(--ink)}
+@media(max-width:820px){.faucet-grid,.fc-rules{grid-template-columns:minmax(0,1fr)}}
