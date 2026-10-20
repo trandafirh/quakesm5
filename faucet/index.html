@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MW5 faucet</title>
-<meta name="description" content="The MW5 faucet is paid by earthquakes: every magnitude 5+ quake releases 500 MW5 per point above 5. Claim with just your address.">
+<meta name="description" content="The MW5 faucet is paid by earthquakes: every magnitude 5+ quake releases 1,000 MW5 per point above 5. Claim with just your address.">
 <meta name="theme-color" content="#070a1a">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
 <script src="/assets/config.js" defer></script>
 <script src="/assets/mw5.js?v=6" defer></script>
-<script src="/assets/faucet.js?v=2" defer></script>
+<script src="/assets/faucet.js?v=3" defer></script>
 </head>
 <body>
 <div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
@@ -76,10 +76,10 @@
     <div class="stats fc-stats">
       <article class="glass stat"><span>Earthquakes paid so far</span><b id="stPaid">—</b><small>on-chain, QUAKE_EVENT</small></article>
       <article class="glass stat"><span>MW5 released per wallet</span><b id="stTotal">—</b><small>if you claim after every quake</small></article>
-      <article class="glass stat"><span>Average per quake</span><b>155</b><small>MW5, last 12 months</small></article>
+      <article class="glass stat"><span>Average per quake</span><b>310</b><small>MW5, last 12 months</small></article>
       <article class="glass stat"><span>Quakes per day</span><b>5.5</b><small>M5+, last 12 months</small></article>
-      <article class="glass stat"><span>A typical day</span><b>~850</b><small>MW5 for a wallet that claims after every quake</small></article>
-      <article class="glass stat"><span>Biggest of the year</span><b>M7.8</b><small>it paid 1,400 MW5</small></article>
+      <article class="glass stat"><span>A typical day</span><b>~1,700</b><small>MW5 for a wallet that claims after every quake</small></article>
+      <article class="glass stat"><span>Biggest of the year</span><b>M7.8</b><small>it paid 2,800 MW5</small></article>
     </div>
   </div>
 </section>
@@ -102,8 +102,8 @@
       <h2 class="card-t">How it works</h2>
       <ol class="fc-steps">
         <li><b>An earthquake happens.</b> Every magnitude 5+ quake is published on the blockchain a few minutes later. Its magnitude is the median of three seismology catalogs: USGS, EMSC and GEOFON.</li>
-        <li><b>It pays 500 MW5 per point above 5.</b> M5.7 pays 350, M6.7 pays 850, M7.8 pays 1,400. There is no maximum.</li>
-        <li><b>The pot adds up.</b> Three quakes of M5.3, M5.4 and M5.3 make 0.3 + 0.4 + 0.3 = 1 point: 500 MW5.</li>
+        <li><b>It pays 1,000 MW5 per point above 5.</b> M5.7 pays 700, M6.7 pays 1,700, M7.8 pays 2,800. There is no maximum.</li>
+        <li><b>The pot adds up.</b> Three quakes of M5.3, M5.4 and M5.3 make 0.3 + 0.4 + 0.3 = 1 point: 1,000 MW5.</li>
         <li><b>Up to 3 quakes.</b> Your pot keeps the last 3 quakes you have not claimed. If a 4th quake arrives and you still have not claimed, the pot empties and starts again from the next quake. So come back often.</li>
         <li><b>Claim with your address.</b> Paste it and press Claim: the MW5 arrive in your wallet and the network fee is paid for you. No wallet to connect, no limit on how much you can collect.</li>
       </ol>
@@ -111,12 +111,12 @@
     <div class="glass card fc-example">
       <h2 class="card-t">Example</h2>
       <ul class="fc-ex">
-        <li><span>09:12</span><b>M5.7</b><em>Fiji</em><strong>+350</strong></li>
-        <li><span>11:40</span><b>M5.3</b><em>Chile</em><strong>+150</strong></li>
-        <li><span>15:05</span><b>M6.1</b><em>Japan</em><strong>+550</strong></li>
-        <li class="tot"><span></span><b></b><em>Your pot</em><strong>1,050</strong></li>
+        <li><span>09:12</span><b>M5.7</b><em>Fiji</em><strong>+700</strong></li>
+        <li><span>11:40</span><b>M5.3</b><em>Chile</em><strong>+300</strong></li>
+        <li><span>15:05</span><b>M6.1</b><em>Japan</em><strong>+1,100</strong></li>
+        <li class="tot"><span></span><b></b><em>Your pot</em><strong>2,100</strong></li>
         <li class="reset"><span>18:30</span><b>M5.2</b><em>Not claimed: the pot empties</em><strong>0</strong></li>
-        <li><span>21:47</span><b>M5.9</b><em>Tonga, the pot starts again</em><strong>+450</strong></li>
+        <li><span>21:47</span><b>M5.9</b><em>Tonga, the pot starts again</em><strong>+900</strong></li>
       </ul>
     </div>
   </div>

@@ -13,7 +13,7 @@
   var EXPLORER = 'https://explorer.testnet.chain.robinhood.com';
   var $ = function(id){ return document.getElementById(id); };
   var nf = new Intl.NumberFormat('en-US');
-  function quota(m10){ return Math.max(0, m10 - 50) * 50; }
+  function quota(m10){ return Math.max(0, m10 - 50) * 100; }  // 1.000 MW5 per punto sopra M5
   function call(to, data){
     return fetch(RPC, { method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify({ jsonrpc:'2.0', id:1, method:'eth_call', params:[{ to:to, data:data }, 'latest'] }) })
