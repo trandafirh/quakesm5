@@ -10,12 +10,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/mw5.css?v=5">
+<link rel="stylesheet" href="/assets/mw5.css?v=6">
 <script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
 <script src="/assets/config.js" defer></script>
-<script src="/assets/mw5.js?v=4" defer></script>
+<script src="/assets/mw5.js?v=5" defer></script>
 </head>
 <body>
 <div class="sky" aria-hidden="true"><i class="g1"></i><i class="g2"></i><i class="g3"></i></div>
@@ -38,7 +38,7 @@
       <a href="#fees">Fees</a>
       <a href="#roadmap">Roadmap</a>
     </nav>
-    <a class="btn sm glow" href="/status/">Seismic monitor</a>
+    <a class="btn sm glow contract-btn" href="https://explorer.testnet.chain.robinhood.com/address/0xc7bEeC2e6349392dDc90799b44D21a4AB3A9De0a" target="_blank" rel="noopener noreferrer" title="The QUAKES_M5 contract on Robinhood Chain testnet. The MW5 address goes here once it is deployed."><img src="/assets/logos/robinhood.svg" alt="" width="20" height="20">Smart contract</a>
   </div>
 </header>
 
@@ -58,13 +58,6 @@
       <div class="orbit-ring" aria-hidden="true"></div>
       <canvas id="globe" class="globe" width="640" height="640" aria-label="The Earth with the magnitude 5+ earthquakes of the last 30 days. Touch it to make it shake." role="img"></canvas>
       <p class="globe-note" id="globeNote">Loading the earthquakes of the last 30 days…</p>
-      <div class="live glass" aria-live="polite">
-        <div class="live-top"><span><i class="beat"></i>QUAKES_M5 now</span><span class="badge" id="qpNet">reading…</span></div>
-        <div class="live-num"><strong id="qpValue">—</strong><span>M5+ quakes<br>in 30 days</span></div>
-        <canvas id="seismo" class="seismo" width="420" height="90" aria-hidden="true"></canvas>
-        <div class="live-row"><span>Curve level at this value</span><b id="qpMult">—</b></div>
-        <div class="live-row"><span>Round</span><b id="qpRound">—</b></div>
-      </div>
     </div>
 
     <ul class="orbs orbs-right" aria-label="Where the data comes from">
@@ -73,6 +66,20 @@
       <li><a class="orb logo" href="https://geofon.gfz.de/" target="_blank" rel="noopener noreferrer"><img src="/assets/logos/geofon.svg" alt="" width="64" height="64"><span>GEOFON</span></a></li>
       <li><a class="orb logo" href="https://opsikom.com/" target="_blank" rel="noopener noreferrer"><img src="/assets/logos/opsikom.svg" alt="" width="64" height="64"><span>Opsikom</span></a></li>
     </ul>
+  </div>
+  <div class="wrap hero-cards">
+    <article class="glass card quakes-live" aria-live="polite">
+      <div class="live-top"><span><i class="beat"></i>Earthquakes in real time</span><span class="badge" id="lfState">USGS</span></div>
+      <ul class="feed mini" id="liveFeed"><li class="muted-s">Loading the latest M5+ earthquakes…</li></ul>
+      <a class="lf-more" href="/status/#events">All events on the seismic monitor →</a>
+    </article>
+    <div class="live glass" aria-live="polite">
+      <div class="live-top"><span><i class="beat"></i>QUAKES_M5 now</span><span class="badge" id="qpNet">reading…</span></div>
+      <div class="live-num"><strong id="qpValue">—</strong><span>M5+ quakes<br>in 30 days</span></div>
+      <canvas id="seismo" class="seismo" width="420" height="90" aria-hidden="true"></canvas>
+      <div class="live-row"><span>Curve level at this value</span><b id="qpMult">—</b></div>
+      <div class="live-row"><span>Round</span><b id="qpRound">—</b></div>
+    </div>
   </div>
 </section>
 
@@ -291,7 +298,7 @@
         </a>
         <p>A test coin on the Opsikom earthquake feed. Balances never go down: more quakes burn from the pool, fewer quakes mint to holders.</p>
       </div>
-      <nav class="fg-col" aria-label="Explore"><h4>Explore</h4><a href="/status/">Seismic monitor</a><a href="#how">How it works</a><a href="#simulator">Simulator</a><a href="#tokenomics">Tokenomics</a><a href="#roadmap">Roadmap</a></nav>
+      <nav class="fg-col" aria-label="Explore"><h4>Explore</h4><a href="/status/">Seismic monitor</a><a href="/#how">How it works</a><a href="/#simulator">Simulator</a><a href="/#tokenomics">Tokenomics</a><a href="/#roadmap">Roadmap</a></nav>
       <nav class="fg-col" aria-label="Data"><h4>Data</h4><a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener noreferrer">USGS</a><a href="https://www.emsc-csem.org/" target="_blank" rel="noopener noreferrer">EMSC</a><a href="https://geofon.gfz.de/" target="_blank" rel="noopener noreferrer">GEOFON</a><a href="https://opsikom.com/" target="_blank" rel="noopener noreferrer">Opsikom oracle</a></nav>
       <div class="fg-col"><h4>Network</h4><span class="fg-chain"><img src="/assets/logos/robinhood.svg" alt="" width="20" height="20">Robinhood Chain</span><span>Test network, in preparation</span><span>New value every day, 09:00–20:00 UTC</span></div>
     </div>

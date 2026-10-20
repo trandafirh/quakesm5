@@ -225,7 +225,7 @@ function globe(){
   function shake(){
     var now = performance.now(); if(reduce || now - lastShake < 500) return; lastShake = now;
     if(stage){ stage.classList.remove('quake'); void stage.offsetWidth; stage.classList.add('quake'); }
-    document.querySelectorAll('.orb, .live').forEach(function(o, i){
+    document.querySelectorAll('.orb, .live, .quakes-live').forEach(function(o, i){
       setTimeout(function(){ o.classList.remove('tremble'); void o.offsetWidth; o.classList.add('tremble'); }, 60 + i * 45 + Math.random() * 80);
     });
     window.dispatchEvent(new Event('mw5:quake'));
@@ -262,6 +262,42 @@ function globe(){
     }
     requestAnimationFrame(loop);
   })(last);
+}
+
+/* ---------- terremoti in tempo reale sotto la Terra: gli ultimi M5+, aggiornati ogni 2 minuti ---------- */
+function liveFeed(){
+  var el = $('liveFeed'); if(!el) return;
+  var shown = {}, list = [], first = true;
+  function row(q, fresh){
+    var li = document.createElement('li'); li.className = 'ev' + (fresh ? ' new' : '');
+    var m = document.createElement('span'); m.className = 'mag'; m.style.background = sevColor(q.mag); m.textContent = 'M' + q.mag.toFixed(1);
+    var pl = document.createElement('span'); pl.className = 'place'; pl.textContent = q.place;
+    var sm = document.createElement('small'); sm.textContent = 'depth ' + Math.round(q.depth) + ' km'; pl.appendChild(sm);
+    var tm = document.createElement('time'); tm.dateTime = new Date(q.time).toISOString(); tm.textContent = ago(q.time); tm.dataset.t = q.time;
+    li.appendChild(m); li.appendChild(pl); li.appendChild(tm); return li;
+  }
+  function render(news){
+    list.sort(function(a,b){ return b.time - a.time; }); list = list.slice(0, 7);
+    el.innerHTML = '';
+    list.forEach(function(q){ el.appendChild(row(q, !first && news[q.id])); });
+    first = false;
+  }
+  function add(qs){
+    var news = {}, any = false;
+    qs.forEach(function(q){ q.id = q.id || (q.time + ':' + q.lat.toFixed(2) + ':' + q.lon.toFixed(2)); if(!shown[q.id]){ shown[q.id] = 1; list.push(q); news[q.id] = 1; any = true; } });
+    if(any) render(news);
+    if(any && !first) window.dispatchEvent(new Event('mw5:quake'));
+  }
+  loadQuakes().then(add).catch(function(){ el.innerHTML = '<li class="muted-s">USGS not reachable right now.</li>'; });
+  function poll(){
+    fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson').then(function(r){ return r.json(); }).then(function(j){
+      add(j.features.filter(function(f){ return f.properties.mag >= 5; }).map(function(f){ return {mag:f.properties.mag, place:f.properties.place || 'Unknown location',
+        time:f.properties.time, lon:f.geometry.coordinates[0], lat:f.geometry.coordinates[1], depth:f.geometry.coordinates[2]}; }));
+      var st = $('lfState'); if(st){ st.textContent = 'updated ' + new Date().toISOString().slice(11,16) + ' UTC'; st.className = 'badge ok'; }
+    }).catch(function(){});
+  }
+  setInterval(poll, 120000); setTimeout(poll, 4000);
+  setInterval(function(){ [].forEach.call(el.querySelectorAll('time'), function(t){ t.textContent = ago(+t.dataset.t); }); }, 30000);
 }
 
 /* ---------- fondo pagina: numeri live che vibrano a turno ---------- */
@@ -579,6 +615,7 @@ function drawHistory(){
 /* ---------- avvio ---------- */
 seismo();
 footLive();
+liveFeed();
 globe();
 setupCalc();
 monitor();
